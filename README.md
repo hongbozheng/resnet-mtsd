@@ -35,14 +35,14 @@ tf.config.list_physical_devices('GPU')
 ```
 print("# GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 ```
-If below errors appeared, check the [NUMA node problem](https://gist.github.com/zrruziev/b93e1292bf2ee39284f834ec7397ee9f)
+If below info appeared, check the [NUMA node problem](https://gist.github.com/zrruziev/b93e1292bf2ee39284f834ec7397ee9f)
 ```
 2022-12-26 21:02:28.791057: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:937]
 successful NUMA node read from SysFS had negative value (-1),
 but there must be at least one NUMA node, so returning NUMA node zero
 ```
 
-If below errors appeared, check [NVIDIA TensorRT](https://developer.nvidia.com/tensorrt) &
+If below warnings appeared, check [NVIDIA TensorRT](https://developer.nvidia.com/tensorrt) &
 [NVIDIA TENSORRT DOCUMENTATION](https://docs.nvidia.com/deeplearning/tensorrt/quick-start-guide/index.html#install)
 
 **Note: NVIDIA TensorRT is `OPTIONAL`**
