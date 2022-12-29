@@ -41,7 +41,6 @@ If below info appeared, check the [NUMA node problem](https://gist.github.com/zr
 successful NUMA node read from SysFS had negative value (-1),
 but there must be at least one NUMA node, so returning NUMA node zero
 ```
-
 If below warnings appeared, check [NVIDIA TensorRT](https://developer.nvidia.com/tensorrt) &
 [NVIDIA TENSORRT DOCUMENTATION](https://docs.nvidia.com/deeplearning/tensorrt/quick-start-guide/index.html#install)
 
@@ -57,7 +56,6 @@ LD_LIBRARY_PATH: /usr/local/cuda/lib64:/usr/local/cuda-11.8/lib64
 TF-TRT Warning: Cannot dlopen some TensorRT libraries.
 If you would like to use Nvidia GPU with TensorRT, please make sure the missing libraries mentioned above are installed properly.
 ```
-
 Check tensorflow compatible version at [Tested build configurations](https://www.tensorflow.org/install/source#gpu)
 
 #### CUDA helpful Links
