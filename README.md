@@ -20,6 +20,7 @@ Leaving the virtual environment
 deactivate
 ```
 #### 3. Install dependencies
+In the activated virtual environment
 ```
 cd script
 ./setup.bash
