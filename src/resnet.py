@@ -121,6 +121,7 @@ class ResNet():
 
 def main():
     input_shape = (BATCH_SIZE, CHANNEL, IMAGE_HEIGHT, IMAGE_WIDTH)
+
     '''ResNet-50'''
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
                       input_tensor=None, input_shape=input_shape[1:], classes=1000).get_model()
