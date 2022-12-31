@@ -19,11 +19,22 @@ IMAGE_HEIGHT=224
 IMAGE_WIDTH=224
 
 class ResNet():
-    def __init__(self, num_res_blocks: List[int], model_name: str, include_top: bool, num_classes: int, input_tensor,
-                 input_shape: Tuple[int,int,int]):
-        self.num_classes = num_classes
+    def __init__(self, num_res_blocks: List[int], model_name: str, include_top: bool, weights="imagenet",
+                 input_tensor=None, input_shape: Tuple[int,int,int]=None, classes: int=1000):
 
-        img_input = Input(shape=input_shape)
+        if backend.image_data_format() == "channels_first":
+            input_shape = (CHANNEL, IMAGE_HEIGHT, IMAGE_WIDTH)
+        elif backend.image_data_format() == "channels_last":
+            input_shape = (IMAGE_HEIGHT, IMAGE_WIDTH, CHANNEL)
+
+        if input_tensor is None:
+            img_input = Input(shape=input_shape)
+        else:
+            if not backend.is_keras_tensor(x=input_tensor):
+                img_input = Input(tensor=input_tensor, shape=input_shape)
+            else:
+                img_input = input_tensor
+
         x = ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")(img_input)
 
         x = Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", name="conv1_conv")(x)
@@ -37,10 +48,16 @@ class ResNet():
 
         if include_top:
             x = GlobalAveragePooling2D(name="avg_pool")(x)
-            x = Flatten()(x)
-            x = Dense(units=self.num_classes, activation="softmax", name="predictions")(x)
+            # x = Flatten()(x)
+            x = Dense(units=classes, activation="softmax", name="predictions")(x)
 
         self.model = Model(inputs=img_input, outputs=x, name=model_name)
+
+        if weights == "imagenet":
+            self.model.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
+                                    by_name=False, skip_mismatch=False, options=None)
+        elif weights is not None:
+            self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
 
     def stack_fn(self, x, num_res_blocks: List[int]):
         x = self.stack1(x=x, filters=64, stride1=(1,1), blocks=num_res_blocks[0], name="conv2")
@@ -59,12 +76,12 @@ class ResNet():
         Returns:
           Output tensor for the stacked blocks.
         """
-        x = self.res_block(x=x, filters=filters, conv_shortcut=True, stride=stride1, name=name + "_block1")
+        x = self.block1(x=x, filters=filters, conv_shortcut=True, stride=stride1, name=name + "_block1")
         for i in range(2, blocks+1):
-            x = self.res_block(x=x, filters=filters, conv_shortcut=False, stride=(1,1), name=name + "_block" + str(i))
+            x = self.block1(x=x, filters=filters, conv_shortcut=False, stride=(1,1), name=name + "_block" + str(i))
         return x
 
-    def res_block(self, x, filters: int, kernel_size: Tuple[int,int]=(3,3), stride: Tuple[int,int]=(1,1),
+    def block1(self, x, filters: int, kernel_size: Tuple[int,int]=(3,3), stride: Tuple[int,int]=(1,1),
                   conv_shortcut: bool=True, name: str=None):
         """A residual block.
         Args:
@@ -104,22 +121,20 @@ class ResNet():
 
 def main():
     input_shape = (BATCH_SIZE, CHANNEL, IMAGE_HEIGHT, IMAGE_WIDTH)
-    # img_input = tf.ones(shape=input_shape, dtype=tf.dtypes.float32)
-    # resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, input_tensor=img_input,
-    #                   input_shape=input_shape[1:], num_classes=1000).get_model()
-    # resnet50.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5", by_name=False, skip_mismatch=False)
-    # print(resnet50.summary())
-    # print("[INFO]: Total # of layers in ResNet-50 (no top) %d" % len(resnet50.layers))
-    # print(resnet50.call(inputs=img_input))
-
+    '''ResNet-50'''
+    resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
+                      input_tensor=None, input_shape=input_shape[1:], classes=1000).get_model()
     '''tensorflow.keras.applications.resnet.ResNet50'''
-    img_input = Input(shape=input_shape[1:])
-    resnet50 = ResNet50(include_top=False, weights="imagenet", input_tensor=img_input, input_shape=input_shape[1:],
-                      classes=1000)
+    # img_input = Input(shape=input_shape[1:])
+    resnet50_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None, input_shape=input_shape[1:],
+                             classes=1000)
+
     print(resnet50.summary())
     print("[INFO]: Total # of layers in ResNet-50 (no top) %d" % len(resnet50.layers))
-    # img_input = tf.ones(shape=input_shape, dtype=tf.dtypes.float32)
-    # print(resnet50.call(inputs=img_input))
+
+    img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
+    tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50.call(inputs=img_input),
+                                                           y=resnet50_orig.call(inputs=img_input)))
     return
 
 if __name__ == '__main__':
