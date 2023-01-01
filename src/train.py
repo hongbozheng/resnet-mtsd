@@ -1,0 +1,93 @@
+import resnet as rn
+import tensorflow as tf
+from tensorflow.keras import backend
+from tensorflow.keras import layers
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.losses import SparseCategoricalCrossentropy
+from tensorflow.keras.datasets import mnist, cifar10
+from tensorflow.keras.applications.resnet import preprocess_input
+
+MNIST_CLASSES,CIFAR10_CLASSES=10,10
+CIFAR10_TRAIN_BATCH_SIZE=50000
+CIFAR10_TEST_BATCH_SIZE=10000
+CIFAR10_INPUT_CHANNELS=3
+CIFAR10_INPUT_HEIGHT=32
+CIFAR10_INPUT_WIDTH=32
+
+BATCH_SIZE=32
+EPOCHS=10
+
+def classifier(x):
+    x = layers.Flatten()(x)
+    x = layers.Dense(units=1024, activation="relu", use_bias=True)(x)
+    x = layers.Dense(units=512, activation="relu", use_bias=True)(x)
+    #x = layers.Dense(units=256, activation="relu", use_bias=True)(x)
+    #x = layers.Dense(units=128, activation="relu", use_bias=True)(x)
+    #x = layers.Dense(units=64, activation="relu", use_bias=True)(x)
+    #x = layers.Dense(units=32, activation="relu", use_bias=True)(x)
+    return layers.Dense(units=CIFAR10_CLASSES, activation="softmax", use_bias=True, name="predictions")(x)
+
+def preprocess_cifar10():
+    # load CIFAR-10 dataset (B, C, H, W)
+    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    x_train = x_train.astype("float32")
+    x_train = preprocess_input(x=x_train, data_format=backend.image_data_format())
+    x_test = x_test.astype("float32")
+    x_test = preprocess_input(x=x_test, data_format=backend.image_data_format())
+    assert x_train.shape == (CIFAR10_TRAIN_BATCH_SIZE, CIFAR10_INPUT_CHANNELS, CIFAR10_INPUT_HEIGHT, CIFAR10_INPUT_WIDTH)
+    assert x_test.shape == (CIFAR10_TEST_BATCH_SIZE, CIFAR10_INPUT_CHANNELS, CIFAR10_INPUT_HEIGHT, CIFAR10_INPUT_WIDTH)
+    assert y_train.shape == (CIFAR10_TRAIN_BATCH_SIZE, 1)
+    assert y_test.shape == (CIFAR10_TEST_BATCH_SIZE, 1)
+    return x_train, y_train, x_test, y_test
+
+def create_resnet50_cifar10():
+    resnet50 = rn.ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
+                         input_tensor=None, input_shape=None, classes=1000, pooling="avg",
+                         classifier_activation="softmax").get_model()
+    resnet50.trainable = False
+
+    img_input = layers.Input(shape=(CIFAR10_INPUT_CHANNELS, CIFAR10_INPUT_HEIGHT, CIFAR10_INPUT_WIDTH))
+    img_upsample = layers.UpSampling2D(size=(7,7), data_format=backend.image_data_format(), interpolation="bilinear")(img_input)
+    feature = resnet50(img_upsample)
+    pred = classifier(x=feature)
+    resnet50_cifar10 = Model(inputs=img_input, outputs=pred, name="ResNet-50-CIFAR-10")
+
+    return resnet50_cifar10
+
+def train_mnist():
+    return
+
+def train_cifar10():
+    x_train, y_train, x_test, y_test = preprocess_cifar10()
+    resnet50_cifar10 = create_resnet50_cifar10()
+    print(), print(resnet50_cifar10.summary())
+    resnet50_cifar10.compile(optimizer=Adam(learning_rate=1e-3), loss=SparseCategoricalCrossentropy(from_logits=False),
+                             metrics=["accuracy"])
+    resnet50_cifar10.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=EPOCHS, validation_data=(x_test, y_test), verbose=2)
+
+
+    # # create original ResNet-50 (no top)
+    # input_shape = (BATCH_SIZE, CHANNEL, IMAGE_HEIGHT, IMAGE_WIDTH)
+    # resnet50 = rn.ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
+    #                      input_tensor=None, input_shape=input_shape[1:], classes=1000, pooling=None,
+    #                      classifier_activation="softmax").get_model()
+    # resnet50.trainable = False
+    #
+    # # create ResNet-50-MNIST
+    # base_inputs = resnet50.layers[0].input
+    # base_outputs = resnet50.layers[-1].output
+    # output = layers.Dense(units=MNIST_CLASSES, name="predictions")(base_outputs)
+    # resnet50_cifar10 = Model(inputs=base_inputs, outputs=output, name="ResNet-50-MNIST")
+    # print(resnet50_cifar10.summary())
+    #
+    # resnet50_cifar10.compile(optimizer=Adam(), loss=SparseCategoricalCrossentropy(from_logits=True), metrics=["accuracy"])
+    # resnet50_cifar10.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=2)
+    return
+
+def main():
+    train_cifar10()
+    return
+
+if __name__ == '__main__':
+    main()
