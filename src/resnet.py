@@ -14,9 +14,9 @@ from tensorflow.keras.applications.resnet import ResNet50, ResNet101
 backend.set_image_data_format('channels_first')
 BN_AXIS=3 if backend.image_data_format()=="channels_last" else 1
 BATCH_SIZE=1
-CHANNEL=3
-IMAGE_HEIGHT=224
-IMAGE_WIDTH=224
+INPUT_CHANNELS=3
+INPUT_HEIGHT=224
+INPUT_WIDTH=224
 
 class ResNet():
     def __init__(self, num_res_blocks: List[int], model_name: str, include_top: bool, weights="imagenet",
@@ -180,7 +180,7 @@ class ResNet():
         return self.model
 
 def main():
-    input_shape = (BATCH_SIZE, CHANNEL, IMAGE_HEIGHT, IMAGE_WIDTH)
+    input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 
     '''ResNet-50'''
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
