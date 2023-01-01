@@ -2,8 +2,8 @@ import config
 from typing import List, Tuple
 import tensorflow as tf
 from tensorflow.keras import backend
-from tensorflow.keras.layers import Input, ZeroPadding2D, Conv2D, BatchNormalization, Activation, MaxPooling2D,\
-    Add, GlobalAveragePooling2D, Flatten, Dense
+from tensorflow.keras import layers
+from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.resnet import ResNet50, ResNet101
 
@@ -20,36 +20,96 @@ IMAGE_WIDTH=224
 
 class ResNet():
     def __init__(self, num_res_blocks: List[int], model_name: str, include_top: bool, weights="imagenet",
-                 input_tensor=None, input_shape: Tuple[int,int,int]=None, classes: int=1000):
+                 input_tensor=None, input_shape: Tuple[int,int,int]=None, pooling=None, classes: int=1000,
+                 classifier_activation: str="softmax"):
+        """Instantiates the ResNet, ResNetV2, and ResNeXt architecture.
+        Args:
+          num_res_blocks: List[int], # of residual blocks
+            in each of the 4 layers in ResNet architecture
+          model_name: string, model name.
+          include_top: whether to include the fully-connected
+            layer at the top of the network.
+          weights: one of `None` (random initialization),
+            'imagenet' (pre-training on ImageNet),
+            or the path to the weights file to be loaded.
+          input_tensor: optional Keras tensor
+            (i.e. output of `layers.Input()`)
+            to use as image input for the model.
+          input_shape: optional shape tuple, only to be specified
+            if `include_top` is False (otherwise the input shape
+            has to be `(224, 224, 3)` (with `channels_last` data format)
+            or `(3, 224, 224)` (with `channels_first` data format).
+            It should have exactly 3 inputs channels.
+          pooling: optional pooling mode for feature extraction
+            when `include_top` is `False`.
+            - `None` means that the output of the model will be
+                the 4D tensor output of the
+                last convolutional layer.
+            - `avg` means that global average pooling
+                will be applied to the output of the
+                last convolutional layer, and thus
+                the output of the model will be a 2D tensor.
+            - `max` means that global max pooling will
+                be applied.
+          classes: optional number of classes to classify images
+            into, only to be specified if `include_top` is True, and
+            if no `weights` argument is specified.
+          classifier_activation: A `str` or callable. The activation function to use
+            on the "top" layer. Ignored unless `include_top=True`. Set
+            `classifier_activation=None` to return the logits of the "top" layer.
+            When loading pretrained weights, `classifier_activation` can only
+            be `None` or `"softmax"`.
+          **kwargs: For backwards compatibility only.
+        Returns:
+          A `keras.Model` instance.
+        """
 
-        if backend.image_data_format() == "channels_first":
-            input_shape = (CHANNEL, IMAGE_HEIGHT, IMAGE_WIDTH)
-        elif backend.image_data_format() == "channels_last":
-            input_shape = (IMAGE_HEIGHT, IMAGE_WIDTH, CHANNEL)
+        if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
+            raise ValueError(
+                "The `weights` argument should be either "
+                "`None` (random initialization), `imagenet` "
+                "(pre-training on ImageNet), "
+                "or the path to the weights file to be loaded."
+            )
+
+        if weights == "imagenet" and include_top and classes != 1000:
+            raise ValueError(
+                'If using `weights` as `"imagenet"` with `include_top`'
+                " as true, `classes` should be 1000"
+            )
+
+        input_shape = imagenet_utils.obtain_input_shape(input_shape=input_shape, default_size=224, min_size=32,
+                                                        data_format=backend.image_data_format(),
+                                                        require_flatten=include_top, weights=None)
 
         if input_tensor is None:
-            img_input = Input(shape=input_shape)
+            img_input = layers.Input(shape=input_shape)
         else:
             if not backend.is_keras_tensor(x=input_tensor):
-                img_input = Input(tensor=input_tensor, shape=input_shape)
+                img_input = layers.Input(tensor=input_tensor, shape=input_shape)
             else:
                 img_input = input_tensor
 
-        x = ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")(img_input)
+        x = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")(img_input)
 
-        x = Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", name="conv1_conv")(x)
-        x = BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="conv1_bn")(x)
-        x = Activation("relu", name="conv1_relu")(x)
+        x = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", name="conv1_conv")(x)
+        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="conv1_bn")(x)
+        x = layers.Activation("relu", name="conv1_relu")(x)
 
-        x = ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")(x)
-        x = MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")(x)
+        x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")(x)
+        x = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")(x)
 
         x = self.stack_fn(x=x, num_res_blocks=num_res_blocks)
 
         if include_top:
-            x = GlobalAveragePooling2D(name="avg_pool")(x)
-            # x = Flatten()(x)
-            x = Dense(units=classes, activation="softmax", name="predictions")(x)
+            x = layers.GlobalAveragePooling2D(name="avg_pool")(x)
+            imagenet_utils.validate_activation(classifier_activation=classifier_activation, weights=weights)
+            x = layers.Dense(units=classes, activation="softmax", name="predictions")(x)
+        else:
+            if pooling == "avg":
+                x = layers.GlobalAveragePooling2D(name="avg_pool")(x)
+            elif pooling == "max":
+                x = layers.GlobalMaxPooling2D(name="max_pool")(x)
 
         self.model = Model(inputs=img_input, outputs=x, name=model_name)
 
@@ -96,24 +156,24 @@ class ResNet():
           Output tensor for the residual block.
         """
         if conv_shortcut:
-            shortcut = Conv2D(filters=4*filters, kernel_size=(1,1), strides=stride, name=name + "_0_conv")(x)
-            shortcut = BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_0_bn")(shortcut)
+            shortcut = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=stride, name=name + "_0_conv")(x)
+            shortcut = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_0_bn")(shortcut)
         else:
             shortcut = x
 
-        x = Conv2D(filters=filters, kernel_size=(1,1), strides=stride, padding="VALID", name=name + "_1_conv")(x)
-        x = BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_1_bn")(x)
-        x = Activation("relu", name=name + "_1_relu")(x)
+        x = layers.Conv2D(filters=filters, kernel_size=(1,1), strides=stride, padding="VALID", name=name + "_1_conv")(x)
+        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_1_bn")(x)
+        x = layers.Activation("relu", name=name + "_1_relu")(x)
 
-        x = Conv2D(filters=filters, kernel_size=kernel_size, strides=(1,1), padding="SAME", name=name + "_2_conv")(x)
-        x = BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_2_bn")(x)
-        x = Activation("relu", name=name + "_2_relu")(x)
+        x = layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=(1,1), padding="SAME", name=name + "_2_conv")(x)
+        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_2_bn")(x)
+        x = layers.Activation("relu", name=name + "_2_relu")(x)
 
-        x = Conv2D(filters=4*filters, kernel_size=(1,1), strides=(1,1), padding="VALID", name=name + "_3_conv")(x)
-        x = BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_3_bn")(x)
+        x = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=(1,1), padding="VALID", name=name + "_3_conv")(x)
+        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_3_bn")(x)
 
-        x = Add(name=name + "_add")([shortcut, x])
-        x = Activation("relu", name=name + "_out")(x)
+        x = layers.Add(name=name + "_add")([shortcut, x])
+        x = layers.Activation("relu", name=name + "_out")(x)
         return x
 
     def get_model(self) -> Model:
@@ -124,11 +184,12 @@ def main():
 
     '''ResNet-50'''
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
-                      input_tensor=None, input_shape=input_shape[1:], classes=1000).get_model()
+                      input_tensor=None, input_shape=input_shape[1:], classes=1000, pooling=None,
+                      classifier_activation="softmax").get_model()
+
     '''tensorflow.keras.applications.resnet.ResNet50'''
-    # img_input = Input(shape=input_shape[1:])
     resnet50_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None, input_shape=input_shape[1:],
-                             classes=1000)
+                            pooling=None, classes=1000)
 
     print(resnet50.summary())
     print("[INFO]: Total # of layers in ResNet-50 (no top) %d" % len(resnet50.layers))
