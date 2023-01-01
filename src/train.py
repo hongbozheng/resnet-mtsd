@@ -22,10 +22,10 @@ def classifier(x):
     x = layers.Flatten()(x)
     x = layers.Dense(units=1024, activation="relu", use_bias=True)(x)
     x = layers.Dense(units=512, activation="relu", use_bias=True)(x)
-    #x = layers.Dense(units=256, activation="relu", use_bias=True)(x)
-    #x = layers.Dense(units=128, activation="relu", use_bias=True)(x)
-    #x = layers.Dense(units=64, activation="relu", use_bias=True)(x)
-    #x = layers.Dense(units=32, activation="relu", use_bias=True)(x)
+    # x = layers.Dense(units=256, activation="relu", use_bias=True)(x)
+    # x = layers.Dense(units=128, activation="relu", use_bias=True)(x)
+    # x = layers.Dense(units=64, activation="relu", use_bias=True)(x)
+    # x = layers.Dense(units=32, activation="relu", use_bias=True)(x)
     return layers.Dense(units=CIFAR10_CLASSES, activation="softmax", use_bias=True, name="predictions")(x)
 
 def preprocess_cifar10():
@@ -66,23 +66,6 @@ def train_cifar10():
                              metrics=["accuracy"])
     resnet50_cifar10.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=EPOCHS, validation_data=(x_test, y_test), verbose=2)
 
-
-    # # create original ResNet-50 (no top)
-    # input_shape = (BATCH_SIZE, CHANNEL, IMAGE_HEIGHT, IMAGE_WIDTH)
-    # resnet50 = rn.ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
-    #                      input_tensor=None, input_shape=input_shape[1:], classes=1000, pooling=None,
-    #                      classifier_activation="softmax").get_model()
-    # resnet50.trainable = False
-    #
-    # # create ResNet-50-MNIST
-    # base_inputs = resnet50.layers[0].input
-    # base_outputs = resnet50.layers[-1].output
-    # output = layers.Dense(units=MNIST_CLASSES, name="predictions")(base_outputs)
-    # resnet50_cifar10 = Model(inputs=base_inputs, outputs=output, name="ResNet-50-MNIST")
-    # print(resnet50_cifar10.summary())
-    #
-    # resnet50_cifar10.compile(optimizer=Adam(), loss=SparseCategoricalCrossentropy(from_logits=True), metrics=["accuracy"])
-    # resnet50_cifar10.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=2)
     return
 
 def main():
