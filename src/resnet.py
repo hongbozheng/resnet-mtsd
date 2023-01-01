@@ -7,11 +7,6 @@ from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.resnet import ResNet50, ResNet101
 
-'''
-# channel first -> B C H W
-# channel last  -> B H W C 
-'''
-backend.set_image_data_format('channels_first')
 BN_AXIS=3 if backend.image_data_format()=="channels_last" else 1
 BATCH_SIZE=1
 INPUT_CHANNELS=3
