@@ -102,14 +102,14 @@ class ResNet():
         x = self.stack_fn(x=x, num_res_blocks=num_res_blocks)
 
         if include_top:
-            x = layers.GlobalAveragePooling2D(name="avg_pool")(x)
+            x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
             imagenet_utils.validate_activation(classifier_activation=classifier_activation, weights=weights)
             x = layers.Dense(units=classes, activation="softmax", name="predictions")(x)
         else:
             if pooling == "avg":
-                x = layers.GlobalAveragePooling2D(name="avg_pool")(x)
+                x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
             elif pooling == "max":
-                x = layers.GlobalMaxPooling2D(name="max_pool")(x)
+                x = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")(x)
 
         self.model = Model(inputs=img_input, outputs=x, name=model_name)
 
