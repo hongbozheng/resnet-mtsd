@@ -1,3 +1,4 @@
+import config
 import resnet as rn
 import tensorflow as tf
 from tensorflow.keras import backend
@@ -7,8 +8,6 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import SparseCategoricalCrossentropy
 from tensorflow.keras.datasets import mnist, cifar10
 from tensorflow.keras.applications.resnet import preprocess_input
-
-GPUs=["GPU:0", "GPU:1"]
 
 MNIST_CLASSES,CIFAR10_CLASSES=10,10
 CIFAR10_TRAIN_BATCH_SIZE=50000
@@ -56,7 +55,7 @@ def train_mnist():
     return
 
 def train_resnet50_cifar10():
-    strategy = tf.distribute.MirroredStrategy(devices=GPUs, cross_device_ops=None)
+    strategy = tf.distribute.MirroredStrategy(devices=config.GPUs, cross_device_ops=None)
     with strategy.scope():
         x_train, y_train, x_test, y_test = preprocess_cifar10()
         resnet50_cifar10 = create_resnet50_cifar10()
