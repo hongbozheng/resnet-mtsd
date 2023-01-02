@@ -24,10 +24,6 @@ def classifier(x):
     x = layers.Flatten()(x)
     x = layers.Dense(units=1024, activation="relu", use_bias=True)(x)
     x = layers.Dense(units=512, activation="relu", use_bias=True)(x)
-    x = layers.Dense(units=256, activation="relu", use_bias=True)(x)
-    x = layers.Dense(units=128, activation="relu", use_bias=True)(x)
-    x = layers.Dense(units=64, activation="relu", use_bias=True)(x)
-    x = layers.Dense(units=32, activation="relu", use_bias=True)(x)
     return layers.Dense(units=CIFAR10_CLASSES, activation="softmax", use_bias=True, name="predictions")(x)
 
 def preprocess_cifar10():
