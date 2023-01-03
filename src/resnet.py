@@ -14,8 +14,15 @@ INPUT_HEIGHT=224
 INPUT_WIDTH=224
 
 class ResNet():
-    def __init__(self, num_res_blocks: List[int], model_name: str, include_top: bool, weights="imagenet",
-                 input_tensor=None, input_shape: Tuple[int,int,int]=None, pooling=None, classes: int=1000,
+    def __init__(self,
+                 num_res_blocks: List[int],
+                 model_name: str,
+                 include_top: bool,
+                 weights="imagenet",
+                 input_tensor=None,
+                 input_shape: Tuple[int,int,int]=None,
+                 pooling=None,
+                 classes: int=1000,
                  classifier_activation: str="softmax"):
         """Instantiates the ResNet, ResNetV2, and ResNeXt architecture.
         Args:
