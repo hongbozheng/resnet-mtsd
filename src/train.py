@@ -1,5 +1,5 @@
 import config
-import resnet as rn
+from resnet import ResNet
 import tensorflow as tf
 from tensorflow.keras import backend
 from tensorflow.keras import layers
@@ -40,9 +40,9 @@ def preprocess_cifar10():
 
 def create_resnet50_cifar10():
     input_shape = (CIFAR10_INPUT_CHANNELS, CIFAR10_INPUT_HEIGHT, CIFAR10_INPUT_WIDTH)
-    resnet50 = rn.ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
-                         input_tensor=None, input_shape=input_shape, classes=CIFAR10_CLASSES, pooling="avg",
-                         classifier_activation="softmax").get_model()
+    resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
+                      input_tensor=None, input_shape=input_shape, classes=CIFAR10_CLASSES, pooling="avg",
+                      classifier_activation="softmax").get_model()
     resnet50.trainable = False
 
     img_input = layers.Input(shape=input_shape)
