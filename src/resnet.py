@@ -64,7 +64,7 @@ class ResNet():
                  input_shape: Tuple[int,int,int]=None,
                  pooling=None,
                  classes: int=1000,
-                 classifier_activation: str="softmax"):
+                 classifier_activation: str="softmax") -> None:
 
         if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
             raise ValueError(
