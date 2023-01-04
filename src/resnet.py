@@ -103,13 +103,13 @@ class ResNetFPN():
         x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")(x)
         x = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")(x)
 
-        x = self._res_blk_stack(x=x, filters=64, stride1=(1, 1), blocks=num_res_blocks[0], name="conv2")
+        x = self._res_blk_stack(x=x, filters=64, stride=(1,1), blocks=num_res_blocks[0], name="conv2")
         lateral_c2 = x
-        x = self._res_blk_stack(x=x, filters=128, stride1=(2, 2), blocks=num_res_blocks[1], name="conv3")
+        x = self._res_blk_stack(x=x, filters=128, stride=(2,2), blocks=num_res_blocks[1], name="conv3")
         lateral_c3 = x
-        x = self._res_blk_stack(x=x, filters=256, stride1=(2, 2), blocks=num_res_blocks[2], name="conv4")
+        x = self._res_blk_stack(x=x, filters=256, stride=(2,2), blocks=num_res_blocks[2], name="conv4")
         lateral_c4 = x
-        x = self._res_blk_stack(x=x, filters=512, stride1=(2, 2), blocks=num_res_blocks[3], name="conv5")
+        x = self._res_blk_stack(x=x, filters=512, stride=(2,2), blocks=num_res_blocks[3], name="conv5")
 
         if include_top:
             x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
@@ -131,12 +131,12 @@ class ResNetFPN():
         #     self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
 
     def _res_blk_stack(self,
-               x,
-               filters: int,
-               blocks: int,
-               stride1: Union[int, Tuple[int,int]]=(2,2),
-               name: str=None
-               ):
+                       x,
+                       filters: int,
+                       stride: Union[int, Tuple[int,int]],
+                       blocks: int,
+                       name: str=None
+                       ):
         """A set of stacked residual blocks.
         Args:
           x: input tensor.
@@ -147,7 +147,7 @@ class ResNetFPN():
         Returns:
           Output tensor for the stacked blocks.
         """
-        x = self._res_blk(x=x, filters=filters, conv_shortcut=True, stride=stride1, name=name + "_block1")
+        x = self._res_blk(x=x, filters=filters, conv_shortcut=True, stride=stride, name=name + "_block1")
         for i in range(2, blocks+1):
             x = self._res_blk(x=x, filters=filters, conv_shortcut=False, stride=(1,1), name=name + "_block" + str(i))
         return x
@@ -173,7 +173,7 @@ class ResNetFPN():
           Output tensor for the residual block.
         """
         if conv_shortcut:
-            shortcut = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=stride, name=name + "_0_conv")(x)
+            shortcut = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=stride, padding="VALID", name=name + "_0_conv")(x)
             shortcut = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_0_bn")(shortcut)
         else:
             shortcut = x
