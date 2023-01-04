@@ -206,34 +206,34 @@ class ResNetFPN():
         m = layers.Add(name="add_C"+name+"_M"+str(int(name)+1))([c, m])
         return m
 
-    def Conv2dNormActivation(self,
-                             x,
-                             in_channels: int,
-                             filters: int,
-                             kernel_size: Union[int, Tuple[int,int]]=(3,3),
-                             stride: Union[int, Tuple[int,int]]=(1,1),
-                             padding: Optional[Union[int, Tuple[int,int], str]]="VALID",
-                             data_format=None,
-                             dilation_rate: Union[int, Tuple[int,int]]=1,
-                             activation: Optional[Callable[..., Layer]]=None,
-                             use_bias: Optional[bool]=True,
-                             kernel_initializer="glorot_uniform",
-                             bias_initializer='zeros',
-                             kernel_regularizer=None,
-                             bias_regularizer=None,
-                             activity_regularizer=None,
-                             kernel_constraint=None,
-                             bias_constraint=None,
-                             trainable=True,
-                             name=None,
-                             norm_layer: Optional[Callable[..., Layer]]=None,
-                             activation_layer: Optional[Callable[..., Layer]]=None,
-                             **kwargs):
-        x = layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=stride, padding=padding, use_bias=use_bias,
-                          name=name + "_1_conv")(x)
-        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_2_bn")(x)
-        x = layers.Activation(activation=activation, name="")(x)
-        return x
+    # def Conv2dNormActivation(self,
+    #                          x,
+    #                          in_channels: int,
+    #                          filters: int,
+    #                          kernel_size: Union[int, Tuple[int,int]]=(3,3),
+    #                          stride: Union[int, Tuple[int,int]]=(1,1),
+    #                          padding: Optional[Union[int, Tuple[int,int], str]]="VALID",
+    #                          data_format=None,
+    #                          dilation_rate: Union[int, Tuple[int,int]]=1,
+    #                          activation: Optional[Callable[..., Layer]]=None,
+    #                          use_bias: Optional[bool]=True,
+    #                          kernel_initializer="glorot_uniform",
+    #                          bias_initializer='zeros',
+    #                          kernel_regularizer=None,
+    #                          bias_regularizer=None,
+    #                          activity_regularizer=None,
+    #                          kernel_constraint=None,
+    #                          bias_constraint=None,
+    #                          trainable=True,
+    #                          name=None,
+    #                          norm_layer: Optional[Callable[..., Layer]]=None,
+    #                          activation_layer: Optional[Callable[..., Layer]]=None,
+    #                          **kwargs):
+    #     x = layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=stride, padding=padding, use_bias=use_bias,
+    #                       name=name + "_1_conv")(x)
+    #     x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_2_bn")(x)
+    #     x = layers.Activation(activation=activation, name="")(x)
+    #     return x
 
     def get_model(self) -> Model:
         return self.model
