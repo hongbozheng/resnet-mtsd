@@ -108,6 +108,10 @@ class ResNetFPN():
         c4 = self._res_blk_stack(x=c3, filters=256, stride=(2,2), blocks=num_res_blocks[2], name="conv4")
         c5 = self._res_blk_stack(x=c4, filters=512, stride=(2,2), blocks=num_res_blocks[3], name="conv5")
 
+        # TODO: Implement Lateral Feature Map L2 L3 L4 L5
+
+        # TODO: Implement Final Feature Map P2 P3 P4 P5
+
         if include_top:
             x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(c5)
             imagenet_utils.validate_activation(classifier_activation=classifier_activation, weights=weights)
