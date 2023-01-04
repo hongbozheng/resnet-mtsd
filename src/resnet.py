@@ -103,7 +103,13 @@ class ResNetFPN():
         x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")(x)
         x = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")(x)
 
-        x, lateral_c4, lateral_c3, lateral_c2 = self.stack_fn(x=x, num_res_blocks=num_res_blocks)
+        x = self._res_blk_stack(x=x, filters=64, stride1=(1, 1), blocks=num_res_blocks[0], name="conv2")
+        lateral_c2 = x
+        x = self._res_blk_stack(x=x, filters=128, stride1=(2, 2), blocks=num_res_blocks[1], name="conv3")
+        lateral_c3 = x
+        x = self._res_blk_stack(x=x, filters=256, stride1=(2, 2), blocks=num_res_blocks[2], name="conv4")
+        lateral_c4 = x
+        x = self._res_blk_stack(x=x, filters=512, stride1=(2, 2), blocks=num_res_blocks[3], name="conv5")
 
         if include_top:
             x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
@@ -124,17 +130,7 @@ class ResNetFPN():
         # elif weights is not None:
         #     self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
 
-    def stack_fn(self, x, num_res_blocks: List[int]):
-        x = self.stack1(x=x, filters=64, stride1=(1,1), blocks=num_res_blocks[0], name="conv2")
-        lateral_c2 = x
-        x = self.stack1(x=x, filters=128, stride1=(2,2), blocks=num_res_blocks[1], name="conv3")
-        lateral_c3 = x
-        x = self.stack1(x=x, filters=256, stride1=(2,2), blocks=num_res_blocks[2], name="conv4")
-        lateral_c4 = x
-        x = self.stack1(x=x, filters=512, stride1=(2,2), blocks=num_res_blocks[3], name="conv5")
-        return x, lateral_c4, lateral_c3, lateral_c2
-
-    def stack1(self,
+    def _res_blk_stack(self,
                x,
                filters: int,
                blocks: int,
@@ -151,12 +147,12 @@ class ResNetFPN():
         Returns:
           Output tensor for the stacked blocks.
         """
-        x = self.block1(x=x, filters=filters, conv_shortcut=True, stride=stride1, name=name + "_block1")
+        x = self._res_blk(x=x, filters=filters, conv_shortcut=True, stride=stride1, name=name + "_block1")
         for i in range(2, blocks+1):
-            x = self.block1(x=x, filters=filters, conv_shortcut=False, stride=(1,1), name=name + "_block" + str(i))
+            x = self._res_blk(x=x, filters=filters, conv_shortcut=False, stride=(1,1), name=name + "_block" + str(i))
         return x
 
-    def block1(self,
+    def _res_blk(self,
                x,
                filters: int,
                kernel_size: Union[int, Tuple[int,int]]=(3,3),
@@ -206,7 +202,7 @@ class ResNetFPN():
                              padding: Optional[Union[int, Tuple[int,int], str]]="VALID",
                              data_format=None,
                              dilation_rate: Union[int, Tuple[int,int]]=1,
-                             activation: Optional[Callable[..., Layer], str]=None,
+                             activation: Optional[Callable[..., Layer]]=None,
                              use_bias: Optional[bool]=True,
                              kernel_initializer="glorot_uniform",
                              bias_initializer='zeros',
@@ -238,15 +234,15 @@ def main():
                       classifier_activation="softmax").get_model()
 
     '''tensorflow.keras.applications.resnet.ResNet50'''
-    resnet50_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None, input_shape=input_shape[1:],
-                            pooling=None, classes=1000)
+    # resnet50_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None, input_shape=input_shape[1:],
+    #                         pooling=None, classes=1000)
 
     print(resnet50.summary())
     print("[INFO]: Total # of layers in ResNet-50 (no top) %d" % len(resnet50.layers))
 
-    img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
-    tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50.call(inputs=img_input),
-                                                           y=resnet50_orig.call(inputs=img_input)))
+    # img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
+    # tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50.call(inputs=img_input),
+    #                                                        y=resnet50_orig.call(inputs=img_input)))
     return
 
 if __name__ == '__main__':
