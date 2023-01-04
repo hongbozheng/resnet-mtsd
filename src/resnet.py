@@ -1,8 +1,9 @@
 import config
-from typing import List, Tuple
+from typing import List, Tuple, Union, Optional, Callable
 import tensorflow as tf
 from tensorflow.keras import backend
 from tensorflow.keras import layers
+from tensorflow.keras.layers import Layer
 from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.resnet import ResNet50, ResNet101
@@ -13,8 +14,8 @@ INPUT_CHANNELS=3
 INPUT_HEIGHT=224
 INPUT_WIDTH=224
 
-class ResNet():
-    """Instantiates the ResNet, ResNetV2, and ResNeXt architecture.
+class ResNetFPN():
+    """Instantiates the ResNet_FPN architecture.
     Args:
       num_res_blocks: List[int], # of residual blocks
         in each of the 4 layers in ResNet architecture
@@ -64,21 +65,22 @@ class ResNet():
                  input_shape: Tuple[int,int,int]=None,
                  pooling=None,
                  classes: int=1000,
-                 classifier_activation: str="softmax") -> None:
+                 classifier_activation: str="softmax"
+                 ) -> None:
 
-        if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
-            raise ValueError(
-                "The `weights` argument should be either "
-                "`None` (random initialization), `imagenet` "
-                "(pre-training on ImageNet), "
-                "or the path to the weights file to be loaded."
-            )
+        # if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
+        #     raise ValueError(
+        #         "The `weights` argument should be either "
+        #         "`None` (random initialization), `imagenet` "
+        #         "(pre-training on ImageNet), "
+        #         "or the path to the weights file to be loaded."
+        #     )
 
-        if weights == "imagenet" and include_top and classes != 1000:
-            raise ValueError(
-                'If using `weights` as `"imagenet"` with `include_top`'
-                " as true, `classes` should be 1000"
-            )
+        # if weights == "imagenet" and include_top and classes != 1000:
+        #     raise ValueError(
+        #         'If using `weights` as `"imagenet"` with `include_top`'
+        #         " as true, `classes` should be 1000"
+        #     )
 
         input_shape = imagenet_utils.obtain_input_shape(input_shape=input_shape, default_size=224, min_size=32,
                                                         data_format=backend.image_data_format(),
@@ -101,7 +103,7 @@ class ResNet():
         x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")(x)
         x = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")(x)
 
-        x = self.stack_fn(x=x, num_res_blocks=num_res_blocks)
+        x, lateral_c4, lateral_c3, lateral_c2 = self.stack_fn(x=x, num_res_blocks=num_res_blocks)
 
         if include_top:
             x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
@@ -113,21 +115,32 @@ class ResNet():
             elif pooling == "max":
                 x = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")(x)
 
+        # TODO: return List or Tuple
         self.model = Model(inputs=img_input, outputs=x, name=model_name)
 
-        if weights == "imagenet":
-            self.model.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
-                                    by_name=False, skip_mismatch=False, options=None)
-        elif weights is not None:
-            self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
+        # if weights == "imagenet":
+        #     self.model.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
+        #                             by_name=False, skip_mismatch=False, options=None)
+        # elif weights is not None:
+        #     self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
 
     def stack_fn(self, x, num_res_blocks: List[int]):
         x = self.stack1(x=x, filters=64, stride1=(1,1), blocks=num_res_blocks[0], name="conv2")
+        lateral_c2 = x
         x = self.stack1(x=x, filters=128, stride1=(2,2), blocks=num_res_blocks[1], name="conv3")
+        lateral_c3 = x
         x = self.stack1(x=x, filters=256, stride1=(2,2), blocks=num_res_blocks[2], name="conv4")
-        return self.stack1(x=x, filters=512, stride1=(2,2), blocks=num_res_blocks[3], name="conv5")
+        lateral_c4 = x
+        x = self.stack1(x=x, filters=512, stride1=(2,2), blocks=num_res_blocks[3], name="conv5")
+        return x, lateral_c4, lateral_c3, lateral_c2
 
-    def stack1(self, x, filters: int, blocks: int, stride1: Tuple[int,int]=(2,2), name: str=None):
+    def stack1(self,
+               x,
+               filters: int,
+               blocks: int,
+               stride1: Union[int, Tuple[int,int]]=(2,2),
+               name: str=None
+               ):
         """A set of stacked residual blocks.
         Args:
           x: input tensor.
@@ -143,8 +156,14 @@ class ResNet():
             x = self.block1(x=x, filters=filters, conv_shortcut=False, stride=(1,1), name=name + "_block" + str(i))
         return x
 
-    def block1(self, x, filters: int, kernel_size: Tuple[int,int]=(3,3), stride: Tuple[int,int]=(1,1),
-                  conv_shortcut: bool=True, name: str=None):
+    def block1(self,
+               x,
+               filters: int,
+               kernel_size: Union[int, Tuple[int,int]]=(3,3),
+               stride: Union[int, Tuple[int,int]]=(1,1),
+               conv_shortcut: bool=True,
+               name: str=None
+               ):
         """A residual block.
         Args:
           x: input tensor.
@@ -178,6 +197,35 @@ class ResNet():
         x = layers.Activation("relu", name=name + "_out")(x)
         return x
 
+    def Conv2dNormActivation(self,
+                             x,
+                             in_channels: int,
+                             filters: int,
+                             kernel_size: Union[int, Tuple[int,int]]=(3,3),
+                             stride: Union[int, Tuple[int,int]]=(1,1),
+                             padding: Optional[Union[int, Tuple[int,int], str]]="VALID",
+                             data_format=None,
+                             dilation_rate: Union[int, Tuple[int,int]]=1,
+                             activation: Optional[Callable[..., Layer], str]=None,
+                             use_bias: Optional[bool]=True,
+                             kernel_initializer="glorot_uniform",
+                             bias_initializer='zeros',
+                             kernel_regularizer=None,
+                             bias_regularizer=None,
+                             activity_regularizer=None,
+                             kernel_constraint=None,
+                             bias_constraint=None,
+                             trainable=True,
+                             name=None,
+                             norm_layer: Optional[Callable[..., Layer]]=None,
+                             activation_layer: Optional[Callable[..., Layer]]=None,
+                             **kwargs):
+        x = layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=stride, padding=padding, use_bias=use_bias,
+                          name=name + "_1_conv")(x)
+        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_2_bn")(x)
+        x = layers.Activation(activation=activation, name="")(x)
+        return x
+
     def get_model(self) -> Model:
         return self.model
 
@@ -185,7 +233,7 @@ def main():
     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 
     '''ResNet-50'''
-    resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
+    resnet50 = ResNetFPN(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
                       input_tensor=None, input_shape=input_shape[1:], classes=1000, pooling=None,
                       classifier_activation="softmax").get_model()
 
