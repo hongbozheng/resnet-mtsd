@@ -103,16 +103,13 @@ class ResNetFPN():
         x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")(x)
         x = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")(x)
 
-        x = self._res_blk_stack(x=x, filters=64, stride=(1,1), blocks=num_res_blocks[0], name="conv2")
-        lateral_c2 = x
-        x = self._res_blk_stack(x=x, filters=128, stride=(2,2), blocks=num_res_blocks[1], name="conv3")
-        lateral_c3 = x
-        x = self._res_blk_stack(x=x, filters=256, stride=(2,2), blocks=num_res_blocks[2], name="conv4")
-        lateral_c4 = x
-        x = self._res_blk_stack(x=x, filters=512, stride=(2,2), blocks=num_res_blocks[3], name="conv5")
+        c2 = self._res_blk_stack(x=x, filters=64, stride=(1,1), blocks=num_res_blocks[0], name="conv2")
+        c3 = self._res_blk_stack(x=c2, filters=128, stride=(2,2), blocks=num_res_blocks[1], name="conv3")
+        c4 = self._res_blk_stack(x=c3, filters=256, stride=(2,2), blocks=num_res_blocks[2], name="conv4")
+        c5 = self._res_blk_stack(x=c4, filters=512, stride=(2,2), blocks=num_res_blocks[3], name="conv5")
 
         if include_top:
-            x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
+            x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(c5)
             imagenet_utils.validate_activation(classifier_activation=classifier_activation, weights=weights)
             x = layers.Dense(units=classes, activation="softmax", name="predictions")(x)
         else:
@@ -122,7 +119,7 @@ class ResNetFPN():
                 x = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")(x)
 
         # TODO: return List or Tuple
-        self.model = Model(inputs=img_input, outputs=x, name=model_name)
+        self.model = Model(inputs=img_input, outputs=c5, name=model_name)
 
         # if weights == "imagenet":
         #     self.model.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
