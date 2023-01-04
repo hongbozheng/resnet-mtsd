@@ -135,12 +135,6 @@ class ResNetFPN():
         #                             by_name=False, skip_mismatch=False, options=None)
         # elif weights is not None:
         #     self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
-    def _top_down_feature_map(self, c, m, name):
-        c = layers.Conv2D(filters=256, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=False, name="conv_C"+name)(c)
-        c = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="bn_C"+name)(c)
-        m = layers.UpSampling2D(size=(2,2), interpolation="bilinear", name="upsample_M"+str(int(name)+1))(m)
-        m = layers.Add(name="add_C"+name+"_M"+str(int(name)+1))([c, m])
-        return m
 
     def _res_blk_stack(self,
                        x: tf.float32,
@@ -204,6 +198,13 @@ class ResNetFPN():
         x = layers.Add(name=name + "_add")([shortcut, x])
         x = layers.Activation("relu", name=name + "_out")(x)
         return x
+
+    def _top_down_feature_map(self, c:tf.float32, m: tf.float32, name: str) -> tf.float32:
+        c = layers.Conv2D(filters=256, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=False, name="conv_C"+name)(c)
+        c = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="bn_C"+name)(c)
+        m = layers.UpSampling2D(size=(2,2), interpolation="bilinear", name="upsample_M"+str(int(name)+1))(m)
+        m = layers.Add(name="add_C"+name+"_M"+str(int(name)+1))([c, m])
+        return m
 
     def Conv2dNormActivation(self,
                              x,
