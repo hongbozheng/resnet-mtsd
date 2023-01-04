@@ -103,38 +103,49 @@ class ResNetFPN():
         x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")(x)
         x = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")(x)
 
-        c2 = self._res_blk_stack(x=x, filters=64, stride=(1,1), blocks=num_res_blocks[0], name="conv2")
-        c3 = self._res_blk_stack(x=c2, filters=128, stride=(2,2), blocks=num_res_blocks[1], name="conv3")
-        c4 = self._res_blk_stack(x=c3, filters=256, stride=(2,2), blocks=num_res_blocks[2], name="conv4")
-        c5 = self._res_blk_stack(x=c4, filters=512, stride=(2,2), blocks=num_res_blocks[3], name="conv5")
+        c2 = self._res_blk_stack(x=x, filters=64, strides=(1,1), blocks=num_res_blocks[0], name="conv2")
+        c3 = self._res_blk_stack(x=c2, filters=128, strides=(2,2), blocks=num_res_blocks[1], name="conv3")
+        c4 = self._res_blk_stack(x=c3, filters=256, strides=(2,2), blocks=num_res_blocks[2], name="conv4")
+        c5 = self._res_blk_stack(x=c4, filters=512, strides=(2,2), blocks=num_res_blocks[3], name="conv5")
 
-        # TODO: Implement Lateral Feature Map L2 L3 L4 L5
+        p5 = layers.Conv2D(filters=256, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=False, name="P5")(c5)
+        m4 = self._top_down_feature_map(c=c4, m=p5, name="4")
+        m3 = self._top_down_feature_map(c=c3, m=m4, name="3")
+        m2 = self._top_down_feature_map(c=c2, m=m3, name="2")
 
-        # TODO: Implement Final Feature Map P2 P3 P4 P5
+        p4 = layers.Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), padding="SAME", use_bias=False, name="P4")(m4)
+        p3 = layers.Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), padding="SAME", use_bias=False, name="P3")(m3)
+        p2 = layers.Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), padding="SAME", use_bias=False, name="P2")(m2)
 
-        if include_top:
-            x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(c5)
-            imagenet_utils.validate_activation(classifier_activation=classifier_activation, weights=weights)
-            x = layers.Dense(units=classes, activation="softmax", name="predictions")(x)
-        else:
-            if pooling == "avg":
-                x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
-            elif pooling == "max":
-                x = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")(x)
+        # if include_top:
+        #     x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(c5)
+        #     imagenet_utils.validate_activation(classifier_activation=classifier_activation, weights=weights)
+        #     x = layers.Dense(units=classes, activation="softmax", name="predictions")(x)
+        # else:
+        #     if pooling == "avg":
+        #         x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
+        #     elif pooling == "max":
+        #         x = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")(x)
 
         # TODO: return List or Tuple
-        self.model = Model(inputs=img_input, outputs=c5, name=model_name)
+        self.model = Model(inputs=img_input, outputs=[p5,p4,p3,p2], name=model_name)
 
         # if weights == "imagenet":
         #     self.model.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
         #                             by_name=False, skip_mismatch=False, options=None)
         # elif weights is not None:
         #     self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
+    def _top_down_feature_map(self, c, m, name):
+        c = layers.Conv2D(filters=256, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=False, name="conv_C"+name)(c)
+        c = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="bn_C"+name)(c)
+        m = layers.UpSampling2D(size=(2,2), interpolation="bilinear", name="upsample_M"+str(int(name)+1))(m)
+        m = layers.Add(name="add_C"+name+"_M"+str(int(name)+1))([c, m])
+        return m
 
     def _res_blk_stack(self,
                        x: tf.float32,
                        filters: int,
-                       stride: Union[int, Tuple[int,int]],
+                       strides: Union[int, Tuple[int,int]],
                        blocks: int,
                        name: str=None
                        ) -> tf.float32:
@@ -148,16 +159,16 @@ class ResNetFPN():
         Returns:
           Output tensor for the stacked blocks.
         """
-        x = self._res_blk(x=x, filters=filters, conv_shortcut=True, stride=stride, name=name + "_block1")
+        x = self._res_blk(x=x, filters=filters, conv_shortcut=True, strides=strides, name=name + "_block1")
         for i in range(2, blocks+1):
-            x = self._res_blk(x=x, filters=filters, conv_shortcut=False, stride=(1,1), name=name + "_block" + str(i))
+            x = self._res_blk(x=x, filters=filters, conv_shortcut=False, strides=(1,1), name=name + "_block" + str(i))
         return x
 
     def _res_blk(self,
                  x: tf.float32,
                  filters: int,
                  kernel_size: Union[int, Tuple[int,int]]=(3,3),
-                 stride: Union[int, Tuple[int,int]]=(1,1),
+                 strides: Union[int, Tuple[int,int]]=(1,1),
                  conv_shortcut: bool=True,
                  name: str=None
                  ) -> tf.float32:
@@ -174,12 +185,12 @@ class ResNetFPN():
           Output tensor for the residual block.
         """
         if conv_shortcut:
-            shortcut = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=stride, padding="VALID", name=name + "_0_conv")(x)
+            shortcut = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=strides, padding="VALID", name=name + "_0_conv")(x)
             shortcut = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_0_bn")(shortcut)
         else:
             shortcut = x
 
-        x = layers.Conv2D(filters=filters, kernel_size=(1,1), strides=stride, padding="VALID", name=name + "_1_conv")(x)
+        x = layers.Conv2D(filters=filters, kernel_size=(1,1), strides=strides, padding="VALID", name=name + "_1_conv")(x)
         x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_1_bn")(x)
         x = layers.Activation("relu", name=name + "_1_relu")(x)
 
@@ -231,8 +242,8 @@ def main():
 
     '''ResNet-50'''
     resnet50 = ResNetFPN(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
-                      input_tensor=None, input_shape=input_shape[1:], classes=1000, pooling=None,
-                      classifier_activation="softmax").get_model()
+                         input_tensor=None, input_shape=input_shape[1:], classes=1000, pooling=None,
+                         classifier_activation="softmax").get_model()
 
     '''tensorflow.keras.applications.resnet.ResNet50'''
     # resnet50_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None, input_shape=input_shape[1:],
