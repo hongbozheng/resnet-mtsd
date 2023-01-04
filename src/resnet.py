@@ -131,18 +131,18 @@ class ResNetFPN():
         #     self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
 
     def _res_blk_stack(self,
-                       x,
+                       x: tf.float32,
                        filters: int,
                        stride: Union[int, Tuple[int,int]],
                        blocks: int,
                        name: str=None
-                       ):
+                       ) -> tf.float32:
         """A set of stacked residual blocks.
         Args:
           x: input tensor.
           filters: integer, filters of the bottleneck layer in a block.
           blocks: integer, blocks in the stacked blocks.
-          stride1: default 2, stride of the first layer in the first block.
+          stride: stride of the first layer in the first block.
           name: string, stack label.
         Returns:
           Output tensor for the stacked blocks.
@@ -153,13 +153,13 @@ class ResNetFPN():
         return x
 
     def _res_blk(self,
-               x,
-               filters: int,
-               kernel_size: Union[int, Tuple[int,int]]=(3,3),
-               stride: Union[int, Tuple[int,int]]=(1,1),
-               conv_shortcut: bool=True,
-               name: str=None
-               ):
+                 x: tf.float32,
+                 filters: int,
+                 kernel_size: Union[int, Tuple[int,int]]=(3,3),
+                 stride: Union[int, Tuple[int,int]]=(1,1),
+                 conv_shortcut: bool=True,
+                 name: str=None
+                 ) -> tf.float32:
         """A residual block.
         Args:
           x: input tensor.
