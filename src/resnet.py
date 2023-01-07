@@ -14,8 +14,8 @@ INPUT_CHANNELS=3
 INPUT_HEIGHT=224
 INPUT_WIDTH=224
 
-class ResNetFPN():
-    """Instantiates the ResNet_FPN architecture.
+class ResNet():
+    """Instantiates the ResNet architecture.
     Args:
       num_res_blocks: List[int], # of residual blocks
         in each of the 4 layers in ResNet architecture
@@ -68,19 +68,19 @@ class ResNetFPN():
                  classifier_activation: str="softmax"
                  ) -> None:
 
-        # if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
-        #     raise ValueError(
-        #         "The `weights` argument should be either "
-        #         "`None` (random initialization), `imagenet` "
-        #         "(pre-training on ImageNet), "
-        #         "or the path to the weights file to be loaded."
-        #     )
+        if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
+            raise ValueError(
+                "The `weights` argument should be either "
+                "`None` (random initialization), `imagenet` "
+                "(pre-training on ImageNet), "
+                "or the path to the weights file to be loaded."
+            )
 
-        # if weights == "imagenet" and include_top and classes != 1000:
-        #     raise ValueError(
-        #         'If using `weights` as `"imagenet"` with `include_top`'
-        #         " as true, `classes` should be 1000"
-        #     )
+        if weights == "imagenet" and include_top and classes != 1000:
+            raise ValueError(
+                'If using `weights` as `"imagenet"` with `include_top`'
+                " as true, `classes` should be 1000"
+            )
 
         input_shape = imagenet_utils.obtain_input_shape(input_shape=input_shape, default_size=224, min_size=32,
                                                         data_format=backend.image_data_format(),
@@ -103,38 +103,29 @@ class ResNetFPN():
         x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")(x)
         x = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")(x)
 
-        c2 = self._res_blk_stack(x=x, filters=64, strides=(1,1), blocks=num_res_blocks[0], name="conv2")
-        c3 = self._res_blk_stack(x=c2, filters=128, strides=(2,2), blocks=num_res_blocks[1], name="conv3")
-        c4 = self._res_blk_stack(x=c3, filters=256, strides=(2,2), blocks=num_res_blocks[2], name="conv4")
-        c5 = self._res_blk_stack(x=c4, filters=512, strides=(2,2), blocks=num_res_blocks[3], name="conv5")
+        x = self._res_blk_stack(x=x, filters=64, strides=(1,1), blocks=num_res_blocks[0], name="conv2")
+        x = self._res_blk_stack(x=x, filters=128, strides=(2,2), blocks=num_res_blocks[1], name="conv3")
+        x = self._res_blk_stack(x=x, filters=256, strides=(2,2), blocks=num_res_blocks[2], name="conv4")
+        x = self._res_blk_stack(x=x, filters=512, strides=(2,2), blocks=num_res_blocks[3], name="conv5")
 
-        p5 = layers.Conv2D(filters=256, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=False, name="P5")(c5)
-        m4 = self._top_down_feature_map(c=c4, m=p5, name="4")
-        m3 = self._top_down_feature_map(c=c3, m=m4, name="3")
-        m2 = self._top_down_feature_map(c=c2, m=m3, name="2")
-
-        p4 = layers.Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), padding="SAME", use_bias=False, name="P4")(m4)
-        p3 = layers.Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), padding="SAME", use_bias=False, name="P3")(m3)
-        p2 = layers.Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), padding="SAME", use_bias=False, name="P2")(m2)
-
-        # if include_top:
-        #     x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(c5)
-        #     imagenet_utils.validate_activation(classifier_activation=classifier_activation, weights=weights)
-        #     x = layers.Dense(units=classes, activation="softmax", name="predictions")(x)
-        # else:
-        #     if pooling == "avg":
-        #         x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
-        #     elif pooling == "max":
-        #         x = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")(x)
+        if include_top:
+            x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
+            imagenet_utils.validate_activation(classifier_activation=classifier_activation, weights=weights)
+            x = layers.Dense(units=classes, activation="softmax", name="predictions")(x)
+        else:
+            if pooling == "avg":
+                x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
+            elif pooling == "max":
+                x = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")(x)
 
         # TODO: return List or Tuple
-        self.model = Model(inputs=img_input, outputs=[p5,p4,p3,p2], name=model_name)
+        self.model = Model(inputs=img_input, outputs=x, name=model_name)
 
-        # if weights == "imagenet":
-        #     self.model.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
-        #                             by_name=False, skip_mismatch=False, options=None)
-        # elif weights is not None:
-        #     self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
+        if weights == "imagenet":
+            self.model.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
+                                    by_name=False, skip_mismatch=False, options=None)
+        elif weights is not None:
+            self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
 
     def _res_blk_stack(self,
                        x: tf.float32,
@@ -199,42 +190,6 @@ class ResNetFPN():
         x = layers.Activation("relu", name=name + "_out")(x)
         return x
 
-    def _top_down_feature_map(self, c:tf.float32, m: tf.float32, name: str) -> tf.float32:
-        c = layers.Conv2D(filters=256, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=False, name="conv_C"+name)(c)
-        c = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="bn_C"+name)(c)
-        m = layers.UpSampling2D(size=(2,2), interpolation="bilinear", name="upsample_M"+str(int(name)+1))(m)
-        m = layers.Add(name="add_C"+name+"_M"+str(int(name)+1))([c, m])
-        return m
-
-    # def Conv2dNormActivation(self,
-    #                          x,
-    #                          in_channels: int,
-    #                          filters: int,
-    #                          kernel_size: Union[int, Tuple[int,int]]=(3,3),
-    #                          stride: Union[int, Tuple[int,int]]=(1,1),
-    #                          padding: Optional[Union[int, Tuple[int,int], str]]="VALID",
-    #                          data_format=None,
-    #                          dilation_rate: Union[int, Tuple[int,int]]=1,
-    #                          activation: Optional[Callable[..., Layer]]=None,
-    #                          use_bias: Optional[bool]=True,
-    #                          kernel_initializer="glorot_uniform",
-    #                          bias_initializer='zeros',
-    #                          kernel_regularizer=None,
-    #                          bias_regularizer=None,
-    #                          activity_regularizer=None,
-    #                          kernel_constraint=None,
-    #                          bias_constraint=None,
-    #                          trainable=True,
-    #                          name=None,
-    #                          norm_layer: Optional[Callable[..., Layer]]=None,
-    #                          activation_layer: Optional[Callable[..., Layer]]=None,
-    #                          **kwargs):
-    #     x = layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=stride, padding=padding, use_bias=use_bias,
-    #                       name=name + "_1_conv")(x)
-    #     x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_2_bn")(x)
-    #     x = layers.Activation(activation=activation, name="")(x)
-    #     return x
-
     def get_model(self) -> Model:
         return self.model
 
@@ -242,20 +197,20 @@ def main():
     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 
     '''ResNet-50'''
-    resnet50 = ResNetFPN(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
-                         input_tensor=None, input_shape=input_shape[1:], classes=1000, pooling=None,
-                         classifier_activation="softmax").get_model()
+    resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
+                      input_tensor=None, input_shape=input_shape[1:], classes=1000, pooling=None,
+                      classifier_activation="softmax").get_model()
 
     '''tensorflow.keras.applications.resnet.ResNet50'''
-    # resnet50_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None, input_shape=input_shape[1:],
-    #                         pooling=None, classes=1000)
+    resnet50_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None, input_shape=input_shape[1:],
+                            pooling=None, classes=1000)
 
     print(resnet50.summary())
     print("[INFO]: Total # of layers in ResNet-50 (no top) %d" % len(resnet50.layers))
 
-    # img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
-    # tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50.call(inputs=img_input),
-    #                                                        y=resnet50_orig.call(inputs=img_input)))
+    img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
+    tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50.call(inputs=img_input),
+                                                           y=resnet50_orig.call(inputs=img_input)))
     return
 
 if __name__ == '__main__':
