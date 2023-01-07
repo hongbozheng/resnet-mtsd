@@ -1,12 +1,11 @@
 import config
-from typing import List, Tuple, Union, Optional, Callable
+from typing import Union, Tuple, List
 import tensorflow as tf
+from tensorflow import keras
 from tensorflow.keras import backend
 from tensorflow.keras import layers
 from tensorflow.keras.layers import Layer
-from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
-from tensorflow.keras.applications.resnet import ResNet50, ResNet101
 
 BN_AXIS=3 if backend.image_data_format()=="channels_last" else 1
 BATCH_SIZE=1
@@ -14,204 +13,148 @@ INPUT_CHANNELS=3
 INPUT_HEIGHT=224
 INPUT_WIDTH=224
 
-class ResNet():
-    """Instantiates the ResNet architecture.
-    Args:
-      num_res_blocks: List[int], # of residual blocks
-        in each of the 4 layers in ResNet architecture
-      model_name: string, model name.
-      include_top: whether to include the fully-connected
-        layer at the top of the network.
-      weights: one of `None` (random initialization),
-        'imagenet' (pre-training on ImageNet),
-        or the path to the weights file to be loaded.
-      input_tensor: optional Keras tensor
-        (i.e. output of `layers.Input()`)
-        to use as image input for the model.
-      input_shape: optional shape tuple, only to be specified
-        if `include_top` is False (otherwise the input shape
-        has to be `(224, 224, 3)` (with `channels_last` data format)
-        or `(3, 224, 224)` (with `channels_first` data format).
-        It should have exactly 3 inputs channels.
-      pooling: optional pooling mode for feature extraction
-        when `include_top` is `False`.
-        - `None` means that the output of the model will be
-            the 4D tensor output of the
-            last convolutional layer.
-        - `avg` means that global average pooling
-            will be applied to the output of the
-            last convolutional layer, and thus
-            the output of the model will be a 2D tensor.
-        - `max` means that global max pooling will
-            be applied.
-      classes: optional number of classes to classify images
-        into, only to be specified if `include_top` is True, and
-        if no `weights` argument is specified.
-      classifier_activation: A `str` or callable. The activation function to use
-        on the "top" layer. Ignored unless `include_top=True`. Set
-        `classifier_activation=None` to return the logits of the "top" layer.
-        When loading pretrained weights, `classifier_activation` can only
-        be `None` or `"softmax"`.
-      **kwargs: For backwards compatibility only.
-    Returns:
-      A `keras.Model` instance.
-    """
+class ResBlk(Layer):
+    def __init__(self,
+                 filters: int,
+                 strides: Union[int, Tuple[int,int]]=(1,1),
+                 use_bias: bool=True,
+                 conv_shortcut: bool=True,
+                 name: str=None
+                 ) -> None:
+        super(ResBlk, self).__init__()
+        self.conv_shortcut = conv_shortcut
+        self.conv1x1_sc = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=strides, padding="VALID", use_bias=use_bias, name=name+"_conv_sc")
+        self.bn_sc = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name+"_bn_sc")
+        self.conv1x1_1 = layers.Conv2D(filters=filters, kernel_size=(1,1), strides=strides, padding="VALID", use_bias=use_bias, name=name+"_conv1")
+        self.bn1 = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name+"_bn1")
+        self.relu1 = layers.Activation("relu", name=name+"_relu1")
+        self.conv3x3 = layers.Conv2D(filters=filters, kernel_size=(3,3), strides=(1,1), padding="SAME", use_bias=use_bias, name=name+"_conv2")
+        self.bn2 = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name+"bn2")
+        self.relu2 = layers.Activation("relu", name=name+"_relu2")
+        self.conv1x1_3 = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=use_bias, name=name+"conv3")
+        self.bn3 = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name+"bn3")
+        self.add = layers.Add(name=name+"_add")
+        self.relu3 = layers.Activation("relu", name=name+"_relu3")
+
+    def call(self, x: tf.float32, training: bool=False):
+        if self.conv_shortcut:
+            shortcut = self.conv1x1_sc(x)
+            shortcut = self.bn_sc(shortcut, training=training)
+        else:
+            shortcut = x
+
+        x = self.conv1x1_1(x)
+        x = self.bn1(x, training=training)
+        x = self.relu1(x)
+        x = self.conv3x3(x)
+        x = self.bn2(x, training=training)
+        x = self.relu2(x)
+        x = self.conv1x1_3(x)
+        x = self.bn3(x, training=training)
+        x = self.add([shortcut, x])
+        x = self.relu3(x)
+        return x
+
+    def model(self):
+        input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
+        x = layers.Input(shape=input_shape[1:])
+        return Model(inputs=x, outputs=self.call(x=x))
+
+class ResBlkStack(Layer):
+    def __init__(self,
+                 filters: int,
+                 strides: Union[int, Tuple[int,int]],
+                 blocks: int,
+                 name: str=None
+                 ) -> None:
+        super(ResBlkStack, self).__init__()
+        self.res_blk_stack = keras.Sequential()
+        self.res_blk1 = ResBlk(filters=filters, strides=strides, use_bias=True, conv_shortcut=True, name=name+"_block1")
+        self.res_blk1._name = name + "_residual_block1"
+        self.res_blk_stack.add(self.res_blk1)
+        for i in range(2, blocks+1):
+            self.res_blk = ResBlk(filters=filters, strides=(1,1), use_bias=True, conv_shortcut=False, name=name+"_block"+str(i))
+            self.res_blk._name = name + "_residual_block" + str(i)
+            self.res_blk_stack.add(self.res_blk)
+
+    def call(self, x: tf.float32, training: bool=False):
+        x = self.res_blk_stack.call(inputs=x, training=training)
+        return x
+
+    def model(self):
+        input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
+        x = layers.Input(shape=input_shape[1:])
+        return Model(inputs=x, outputs=self.call(x=x))
+
+class ResNet(Layer):
     def __init__(self,
                  num_res_blocks: List[int],
                  model_name: str,
                  include_top: bool,
-                 weights="imagenet",
+                 weights :str="",
                  input_tensor=None,
                  input_shape: Tuple[int,int,int]=None,
                  pooling=None,
                  classes: int=1000,
                  classifier_activation: str="softmax"
                  ) -> None:
+        super(ResNet, self).__init__()
+        self.include_top = include_top
+        self.pooling = pooling
+        self.resnet = keras.Sequential()
+        self.padding_3 = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")
+        self.conv7x7 = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", name="conv1_conv")
+        self.bn1 = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="conv1_bn")
+        self.relu1 = layers.Activation("relu", name="conv1_relu")
+        self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="conv2_pad")
+        self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="conv2_maxpool")
+        self.res_blk_stack1 = ResBlkStack(filters=64, strides=(1,1), blocks=num_res_blocks[0], name="conv2")
+        self.res_blk_stack2 = ResBlkStack(filters=128, strides=(1,1), blocks=num_res_blocks[1], name="conv3")
+        self.res_blk_stack3 = ResBlkStack(filters=256, strides=(1,1), blocks=num_res_blocks[2], name="conv4")
+        self.res_blk_stack4 = ResBlkStack(filters=512, strides=(1,1), blocks=num_res_blocks[3], name="conv5")
+        self.global_avg_pooling = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="global_avg_pool")
+        self.global_max_pooling = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="global_max_pool")
+        self.dense = layers.Dense(units=classes, activation="softmax", name="predictions")
+        self._build()
 
-        if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
-            raise ValueError(
-                "The `weights` argument should be either "
-                "`None` (random initialization), `imagenet` "
-                "(pre-training on ImageNet), "
-                "or the path to the weights file to be loaded."
-            )
-
-        if weights == "imagenet" and include_top and classes != 1000:
-            raise ValueError(
-                'If using `weights` as `"imagenet"` with `include_top`'
-                " as true, `classes` should be 1000"
-            )
-
-        input_shape = imagenet_utils.obtain_input_shape(input_shape=input_shape, default_size=224, min_size=32,
-                                                        data_format=backend.image_data_format(),
-                                                        require_flatten=include_top, weights=None)
-
-        if input_tensor is None:
-            img_input = layers.Input(shape=input_shape)
+    def _build(self):
+        self.resnet.add(self.padding_3)
+        self.resnet.add(self.conv7x7)
+        self.resnet.add(self.bn1)
+        self.resnet.add(self.relu1)
+        self.resnet.add(self.padding)
+        self.resnet.add(self.maxpool)
+        self.resnet.add(self.res_blk_stack1)
+        self.resnet.add(self.res_blk_stack2)
+        self.resnet.add(self.res_blk_stack3)
+        self.resnet.add(self.res_blk_stack4)
+        if self.include_top:
+            self.resnet.add(self.global_avg_pooling)
+            self.resnet.add(self.dense)
         else:
-            if not backend.is_keras_tensor(x=input_tensor):
-                img_input = layers.Input(tensor=input_tensor, shape=input_shape)
-            else:
-                img_input = input_tensor
+            if self.pooling == "avg":
+                self.resnet.add(self.global_avg_pooling)
+            elif self.pooling == "max":
+                self.resnet.add(self.global_max_pooling)
 
-        x = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")(img_input)
-
-        x = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", name="conv1_conv")(x)
-        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="conv1_bn")(x)
-        x = layers.Activation("relu", name="conv1_relu")(x)
-
-        x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")(x)
-        x = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")(x)
-
-        x = self._res_blk_stack(x=x, filters=64, strides=(1,1), blocks=num_res_blocks[0], name="conv2")
-        x = self._res_blk_stack(x=x, filters=128, strides=(2,2), blocks=num_res_blocks[1], name="conv3")
-        x = self._res_blk_stack(x=x, filters=256, strides=(2,2), blocks=num_res_blocks[2], name="conv4")
-        x = self._res_blk_stack(x=x, filters=512, strides=(2,2), blocks=num_res_blocks[3], name="conv5")
-
-        if include_top:
-            x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
-            imagenet_utils.validate_activation(classifier_activation=classifier_activation, weights=weights)
-            x = layers.Dense(units=classes, activation="softmax", name="predictions")(x)
-        else:
-            if pooling == "avg":
-                x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
-            elif pooling == "max":
-                x = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")(x)
-
-        # TODO: return List or Tuple
-        self.model = Model(inputs=img_input, outputs=x, name=model_name)
-
-        if weights == "imagenet":
-            self.model.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
-                                    by_name=False, skip_mismatch=False, options=None)
-        elif weights is not None:
-            self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
-
-    def _res_blk_stack(self,
-                       x: tf.float32,
-                       filters: int,
-                       strides: Union[int, Tuple[int,int]],
-                       blocks: int,
-                       name: str=None
-                       ) -> tf.float32:
-        """A set of stacked residual blocks.
-        Args:
-          x: input tensor.
-          filters: integer, filters of the bottleneck layer in a block.
-          blocks: integer, blocks in the stacked blocks.
-          stride: stride of the first layer in the first block.
-          name: string, stack label.
-        Returns:
-          Output tensor for the stacked blocks.
-        """
-        x = self._res_blk(x=x, filters=filters, conv_shortcut=True, strides=strides, name=name + "_block1")
-        for i in range(2, blocks+1):
-            x = self._res_blk(x=x, filters=filters, conv_shortcut=False, strides=(1,1), name=name + "_block" + str(i))
+    def call(self, x: tf.float32, training: bool=False):
+        x = self.resnet.call(inputs=x, training=training)
         return x
 
-    def _res_blk(self,
-                 x: tf.float32,
-                 filters: int,
-                 kernel_size: Union[int, Tuple[int,int]]=(3,3),
-                 strides: Union[int, Tuple[int,int]]=(1,1),
-                 conv_shortcut: bool=True,
-                 name: str=None
-                 ) -> tf.float32:
-        """A residual block.
-        Args:
-          x: input tensor.
-          filters: integer, filters of the bottleneck layer.
-          kernel_size: default 3, kernel size of the bottleneck layer.
-          stride: default 1, stride of the first layer.
-          conv_shortcut: default True, use convolution shortcut if True,
-            otherwise identity shortcut.
-          name: string, block label.
-        Returns:
-          Output tensor for the residual block.
-        """
-        if conv_shortcut:
-            shortcut = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=strides, padding="VALID", name=name + "_0_conv")(x)
-            shortcut = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_0_bn")(shortcut)
-        else:
-            shortcut = x
-
-        x = layers.Conv2D(filters=filters, kernel_size=(1,1), strides=strides, padding="VALID", name=name + "_1_conv")(x)
-        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_1_bn")(x)
-        x = layers.Activation("relu", name=name + "_1_relu")(x)
-
-        x = layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=(1,1), padding="SAME", name=name + "_2_conv")(x)
-        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_2_bn")(x)
-        x = layers.Activation("relu", name=name + "_2_relu")(x)
-
-        x = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=(1,1), padding="VALID", name=name + "_3_conv")(x)
-        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_3_bn")(x)
-
-        x = layers.Add(name=name + "_add")([shortcut, x])
-        x = layers.Activation("relu", name=name + "_out")(x)
-        return x
-
-    def get_model(self) -> Model:
-        return self.model
+    def model(self):
+        input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
+        x = layers.Input(shape=input_shape[1:])
+        return Model(inputs=x, outputs=self.call(x=x))
 
 def main():
-    input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
-
-    '''ResNet-50'''
-    resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
-                      input_tensor=None, input_shape=input_shape[1:], classes=1000, pooling=None,
-                      classifier_activation="softmax").get_model()
-
-    '''tensorflow.keras.applications.resnet.ResNet50'''
-    resnet50_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None, input_shape=input_shape[1:],
-                            pooling=None, classes=1000)
-
-    print(resnet50.summary())
-    print("[INFO]: Total # of layers in ResNet-50 (no top) %d" % len(resnet50.layers))
-
-    img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
-    tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50.call(inputs=img_input),
-                                                           y=resnet50_orig.call(inputs=img_input)))
+    # haha = ResBlk(filters=32, strides=(1,1), use_bias=True, conv_shortcut=True, name="haha")
+    # print(haha.model().summary())
+    # block = ResBlkStack(filters=64, strides=(2,2), blocks=3, name="conv1")
+    # print(block.model().summary())
+    resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="",
+                      input_tensor=None, input_shape=None, pooling=None, classes=1000, classifier_activation="softmax")
+    print(resnet50.model().summary())
     return
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
