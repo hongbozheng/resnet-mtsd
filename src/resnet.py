@@ -55,10 +55,10 @@ class ResBlk(Layer):
         x = self.relu3(x)
         return x
 
-    def model(self):
-        input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
-        x = layers.Input(shape=input_shape[1:])
-        return Model(inputs=x, outputs=self.call(x=x))
+    # def model(self):
+    #     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
+    #     x = layers.Input(shape=input_shape[1:])
+    #     return Model(inputs=x, outputs=self.call(x=x))
 
 class ResBlkStack(Layer):
     def __init__(self,
@@ -68,23 +68,28 @@ class ResBlkStack(Layer):
                  name: str=None
                  ) -> None:
         super(ResBlkStack, self).__init__()
+        self.filters = filters
+        self.blocks = blocks
         self.res_blk_stack = keras.Sequential()
         self.res_blk1 = ResBlk(filters=filters, strides=strides, use_bias=True, conv_shortcut=True, name=name+"_block1")
+        self._build(name=name)
+
+    def _build(self, name: str) -> None:
         self.res_blk1._name = name + "_residual_block1"
         self.res_blk_stack.add(self.res_blk1)
-        for i in range(2, blocks+1):
-            self.res_blk = ResBlk(filters=filters, strides=(1,1), use_bias=True, conv_shortcut=False, name=name+"_block"+str(i))
+        for i in range(2, self.blocks+1):
+            self.res_blk = ResBlk(filters=self.filters, strides=(1,1), use_bias=True, conv_shortcut=False, name=name+"_block"+str(i))
             self.res_blk._name = name + "_residual_block" + str(i)
             self.res_blk_stack.add(self.res_blk)
 
-    def call(self, x: tf.float32, training: bool=False):
+    def call(self, x: tf.float32, training: bool=False) -> tf.float32:
         x = self.res_blk_stack.call(inputs=x, training=training)
         return x
 
-    def model(self):
-        input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
-        x = layers.Input(shape=input_shape[1:])
-        return Model(inputs=x, outputs=self.call(x=x))
+    # def model(self):
+    #     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
+    #     x = layers.Input(shape=input_shape[1:])
+    #     return Model(inputs=x, outputs=self.call(x=x))
 
 class ResNet(Layer):
     def __init__(self,
@@ -109,24 +114,28 @@ class ResNet(Layer):
         self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="conv2_pad")
         self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="conv2_maxpool")
         self.res_blk_stack1 = ResBlkStack(filters=64, strides=(1,1), blocks=num_res_blocks[0], name="conv2")
-        self.res_blk_stack2 = ResBlkStack(filters=128, strides=(1,1), blocks=num_res_blocks[1], name="conv3")
-        self.res_blk_stack3 = ResBlkStack(filters=256, strides=(1,1), blocks=num_res_blocks[2], name="conv4")
-        self.res_blk_stack4 = ResBlkStack(filters=512, strides=(1,1), blocks=num_res_blocks[3], name="conv5")
+        self.res_blk_stack2 = ResBlkStack(filters=128, strides=(2,2), blocks=num_res_blocks[1], name="conv3")
+        self.res_blk_stack3 = ResBlkStack(filters=256, strides=(2,2), blocks=num_res_blocks[2], name="conv4")
+        self.res_blk_stack4 = ResBlkStack(filters=512, strides=(2,2), blocks=num_res_blocks[3], name="conv5")
         self.global_avg_pooling = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="global_avg_pool")
         self.global_max_pooling = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="global_max_pool")
         self.dense = layers.Dense(units=classes, activation="softmax", name="predictions")
         self._build()
 
-    def _build(self):
+    def _build(self) -> None:
         self.resnet.add(self.padding_3)
         self.resnet.add(self.conv7x7)
         self.resnet.add(self.bn1)
         self.resnet.add(self.relu1)
         self.resnet.add(self.padding)
         self.resnet.add(self.maxpool)
+        self.res_blk_stack1._name = "layer1"
         self.resnet.add(self.res_blk_stack1)
+        self.res_blk_stack2._name = "layer2"
         self.resnet.add(self.res_blk_stack2)
+        self.res_blk_stack3._name = "layer3"
         self.resnet.add(self.res_blk_stack3)
+        self.res_blk_stack4._name = "layer4"
         self.resnet.add(self.res_blk_stack4)
         if self.include_top:
             self.resnet.add(self.global_avg_pooling)
@@ -137,11 +146,14 @@ class ResNet(Layer):
             elif self.pooling == "max":
                 self.resnet.add(self.global_max_pooling)
 
-    def call(self, x: tf.float32, training: bool=False):
+    def call(self, x: tf.float32, training: bool=False) -> tf.float32:
         x = self.resnet.call(inputs=x, training=training)
         return x
 
-    def model(self):
+    def sequential(self) -> keras.Sequential:
+        return self.resnet
+
+    def model(self) -> Model:
         input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
         x = layers.Input(shape=input_shape[1:])
         return Model(inputs=x, outputs=self.call(x=x))
