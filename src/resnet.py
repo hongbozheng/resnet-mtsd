@@ -41,7 +41,6 @@ class ResNet(Layer):
         self.num_res_blocks = num_res_blocks
         self.include_top = include_top
         self.pooling = pooling
-        self.num_classes = num_classes
 
         self.padding_3 = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")
         self.conv7x7 = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", name="conv1_conv")
@@ -54,7 +53,7 @@ class ResNet(Layer):
         self.global_avgpool = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")
         self.global_maxpool = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")
 
-        self.dense = layers.Dense(units=self.num_classes, activation="softmax", name="predictions")
+        self.dense = layers.Dense(units=num_classes, activation="softmax", name="predictions")
 
     def _res_blk_stack(self,
                        x: tf.float32,
