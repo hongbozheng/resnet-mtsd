@@ -5,6 +5,7 @@ from tensorflow import keras
 from tensorflow.keras import backend
 from tensorflow.keras import layers
 from tensorflow.keras.layers import Layer
+from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 
 BN_AXIS=3 if backend.image_data_format()=="channels_last" else 1
@@ -55,11 +56,6 @@ class ResBlk(Layer):
         x = self.relu3(x)
         return x
 
-    # def model(self):
-    #     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
-    #     x = layers.Input(shape=input_shape[1:])
-    #     return Model(inputs=x, outputs=self.call(x=x))
-
 class ResBlkStack(Layer):
     def __init__(self,
                  filters: int,
@@ -86,19 +82,11 @@ class ResBlkStack(Layer):
         x = self.res_blk_stack.call(inputs=x, training=training)
         return x
 
-    # def model(self):
-    #     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
-    #     x = layers.Input(shape=input_shape[1:])
-    #     return Model(inputs=x, outputs=self.call(x=x))
-
 class ResNet(Layer):
     def __init__(self,
                  num_res_blocks: List[int],
-                 model_name: str,
                  include_top: bool,
                  weights :str="",
-                 input_tensor=None,
-                 input_shape: Tuple[int,int,int]=None,
                  pooling=None,
                  classes: int=1000,
                  classifier_activation: str="softmax"
@@ -109,8 +97,8 @@ class ResNet(Layer):
         self.resnet = keras.Sequential()
         self.padding_3 = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")
         self.conv7x7 = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", name="conv1_conv")
-        self.bn1 = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="conv1_bn")
-        self.relu1 = layers.Activation("relu", name="conv1_relu")
+        self.bn = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="conv1_bn")
+        self.relu = layers.Activation("relu", name="conv1_relu")
         self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="conv2_pad")
         self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="conv2_maxpool")
         self.res_blk_stack1 = ResBlkStack(filters=64, strides=(1,1), blocks=num_res_blocks[0], name="conv2")
@@ -125,17 +113,17 @@ class ResNet(Layer):
     def _build(self) -> None:
         self.resnet.add(self.padding_3)
         self.resnet.add(self.conv7x7)
-        self.resnet.add(self.bn1)
-        self.resnet.add(self.relu1)
+        self.resnet.add(self.bn)
+        self.resnet.add(self.relu)
         self.resnet.add(self.padding)
         self.resnet.add(self.maxpool)
-        self.res_blk_stack1._name = "layer1"
+        self.res_blk_stack1._name = "conv2_x"
         self.resnet.add(self.res_blk_stack1)
-        self.res_blk_stack2._name = "layer2"
+        self.res_blk_stack2._name = "conv3_x"
         self.resnet.add(self.res_blk_stack2)
-        self.res_blk_stack3._name = "layer3"
+        self.res_blk_stack3._name = "conv4_x"
         self.resnet.add(self.res_blk_stack3)
-        self.res_blk_stack4._name = "layer4"
+        self.res_blk_stack4._name = "conv5_x"
         self.resnet.add(self.res_blk_stack4)
         if self.include_top:
             self.resnet.add(self.global_avg_pooling)
@@ -153,19 +141,27 @@ class ResNet(Layer):
     def sequential(self) -> keras.Sequential:
         return self.resnet
 
-    def model(self) -> Model:
-        input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
-        x = layers.Input(shape=input_shape[1:])
-        return Model(inputs=x, outputs=self.call(x=x))
+    def model(self, input_tensor=None, input_shape: Tuple[int,int,int]=None, name: str=None) -> Model:
+        input_shape = imagenet_utils.obtain_input_shape(input_shape=input_shape, default_size=224, min_size=32,
+                                                        data_format=backend.image_data_format(),
+                                                        require_flatten=self.include_top, weights=None)
+
+        if input_tensor is None:
+            img_input = layers.Input(shape=input_shape)
+        else:
+            if not backend.is_keras_tensor(x=input_tensor):
+                img_input = layers.Input(tensor=input_tensor, shape=input_shape)
+            else:
+                img_input = input_tensor
+
+        return Model(inputs=img_input, outputs=self.call(x=img_input), name=name)
 
 def main():
-    # haha = ResBlk(filters=32, strides=(1,1), use_bias=True, conv_shortcut=True, name="haha")
-    # print(haha.model().summary())
-    # block = ResBlkStack(filters=64, strides=(2,2), blocks=3, name="conv1")
-    # print(block.model().summary())
-    resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="",
-                      input_tensor=None, input_shape=None, pooling=None, classes=1000, classifier_activation="softmax")
-    print(resnet50.model().summary())
+    input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
+    resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, weights="", pooling="avg", classes=1000,
+                    classifier_activation="softmax")
+    resnet50_model = resnet50.model(input_tensor=None,input_shape=input_shape[1:], name="ResNet-50 Backbone")
+    print(resnet50_model.summary())
     return
 
 if __name__ == "__main__":
