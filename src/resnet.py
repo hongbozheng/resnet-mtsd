@@ -5,6 +5,7 @@ from tensorflow import keras
 from tensorflow.keras import backend
 from tensorflow.keras import layers
 from tensorflow.keras.layers import Layer
+import h5py
 from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 
@@ -17,8 +18,8 @@ INPUT_WIDTH=224
 class ResBlk(Layer):
     def __init__(self,
                  filters: int,
-                 strides: Union[int, Tuple[int,int]]=(1,1),
-                 use_bias: bool=True,
+                 strides: Union[int, Tuple[int,int]],
+                 use_bias: bool=False,
                  conv_shortcut: bool=True,
                  name: str=None
                  ) -> None:
@@ -58,23 +59,25 @@ class ResBlk(Layer):
 
 class ResBlkStack(Layer):
     def __init__(self,
+                 blocks: int,
                  filters: int,
                  strides: Union[int, Tuple[int,int]],
-                 blocks: int,
+                 use_bias: bool=False,
                  name: str=None
                  ) -> None:
         super(ResBlkStack, self).__init__()
         self.filters = filters
+        self.use_bias = use_bias
         self.blocks = blocks
         self.res_blk_stack = keras.Sequential()
-        self.res_blk1 = ResBlk(filters=filters, strides=strides, use_bias=True, conv_shortcut=True, name=name+"_block1")
+        self.res_blk1 = ResBlk(filters=filters, strides=strides, use_bias=self.use_bias, conv_shortcut=True, name=name+"_block1")
         self._build(name=name)
 
     def _build(self, name: str) -> None:
         self.res_blk1._name = name + "_residual_block1"
         self.res_blk_stack.add(self.res_blk1)
         for i in range(2, self.blocks+1):
-            self.res_blk = ResBlk(filters=self.filters, strides=(1,1), use_bias=True, conv_shortcut=False, name=name+"_block"+str(i))
+            self.res_blk = ResBlk(filters=self.filters, strides=(1,1), use_bias=self.use_bias, conv_shortcut=False, name=name+"_block"+str(i))
             self.res_blk._name = name + "_residual_block" + str(i)
             self.res_blk_stack.add(self.res_blk)
 
@@ -86,12 +89,27 @@ class ResNet(Layer):
     def __init__(self,
                  num_res_blocks: List[int],
                  include_top: bool,
-                 weights :str="",
+                 weights :str="imagenet",
                  pooling=None,
                  classes: int=1000,
                  classifier_activation: str="softmax"
                  ) -> None:
         super(ResNet, self).__init__()
+
+        if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
+            raise ValueError(
+                "The `weights` argument should be either "
+                "`None` (random initialization), `imagenet` "
+                "(pre-training on ImageNet), "
+                "or the path to the weights file to be loaded."
+            )
+
+        if weights == "imagenet" and include_top and classes != 1000:
+            raise ValueError(
+                'If using `weights` as `"imagenet"` with `include_top`'
+                " as true, `classes` should be 1000"
+            )
+
         self.include_top = include_top
         self.pooling = pooling
         self.resnet = keras.Sequential()
@@ -101,14 +119,19 @@ class ResNet(Layer):
         self.relu = layers.Activation("relu", name="conv1_relu")
         self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="conv2_pad")
         self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="conv2_maxpool")
-        self.res_blk_stack1 = ResBlkStack(filters=64, strides=(1,1), blocks=num_res_blocks[0], name="conv2")
-        self.res_blk_stack2 = ResBlkStack(filters=128, strides=(2,2), blocks=num_res_blocks[1], name="conv3")
-        self.res_blk_stack3 = ResBlkStack(filters=256, strides=(2,2), blocks=num_res_blocks[2], name="conv4")
-        self.res_blk_stack4 = ResBlkStack(filters=512, strides=(2,2), blocks=num_res_blocks[3], name="conv5")
+        self.res_blk_stack1 = ResBlkStack(filters=64, strides=(1,1), use_bias=True, blocks=num_res_blocks[0], name="conv2")
+        self.res_blk_stack2 = ResBlkStack(filters=128, strides=(2,2), use_bias=True, blocks=num_res_blocks[1], name="conv3")
+        self.res_blk_stack3 = ResBlkStack(filters=256, strides=(2,2), use_bias=True, blocks=num_res_blocks[2], name="conv4")
+        self.res_blk_stack4 = ResBlkStack(filters=512, strides=(2,2), use_bias=True, blocks=num_res_blocks[3], name="conv5")
         self.global_avg_pooling = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="global_avg_pool")
         self.global_max_pooling = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="global_max_pool")
         self.dense = layers.Dense(units=classes, activation="softmax", name="predictions")
         self._build()
+
+        # if weights == "imagenet":
+        #     self._load_weights(weights="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5")
+        # elif weights is not None:
+        #     pass
 
     def _build(self) -> None:
         self.resnet.add(self.padding_3)
@@ -134,6 +157,12 @@ class ResNet(Layer):
             elif self.pooling == "max":
                 self.resnet.add(self.global_max_pooling)
 
+    def _load_weights(self, weights):
+        with h5py.File(weights, "r") as f:
+            print(f.attrs)
+            print(f["layer_names"])
+            print(f["model_weights"])
+
     def call(self, x: tf.float32, training: bool=False) -> tf.float32:
         x = self.resnet.call(inputs=x, training=training)
         return x
@@ -158,7 +187,7 @@ class ResNet(Layer):
 
 def main():
     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
-    resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, weights="", pooling="avg", classes=1000,
+    resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, weights="imagenet", pooling="avg", classes=1000,
                       classifier_activation="softmax")
     resnet50_model = resnet50.model(input_tensor=None,input_shape=input_shape[1:], name="ResNet-50 Backbone")
     print(resnet50_model.summary())
