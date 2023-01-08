@@ -137,6 +137,7 @@ class ResNet():
           filters: integer, filters of the bottleneck layer in a block.
           blocks: integer, blocks in the stacked blocks.
           stride: stride of the first layer in the first block.
+          use_bias: Boolean, whether the layer uses a bias vector.
           name: string, stack label.
         Returns:
           Output tensor for the stacked blocks.
@@ -158,8 +159,8 @@ class ResNet():
         Args:
           x: input tensor.
           filters: integer, filters of the bottleneck layer.
-          kernel_size: default 3, kernel size of the bottleneck layer.
           stride: default 1, stride of the first layer.
+          use_bias: Boolean, whether the layer uses a bias vector.
           conv_shortcut: default True, use convolution shortcut if True,
             otherwise identity shortcut.
           name: string, block label.
