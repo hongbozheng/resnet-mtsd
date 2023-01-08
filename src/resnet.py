@@ -159,7 +159,7 @@ class ResNet(Layer):
 def main():
     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, weights="", pooling="avg", classes=1000,
-                    classifier_activation="softmax")
+                      classifier_activation="softmax")
     resnet50_model = resnet50.model(input_tensor=None,input_shape=input_shape[1:], name="ResNet-50 Backbone")
     print(resnet50_model.summary())
     return
