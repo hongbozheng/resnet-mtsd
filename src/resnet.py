@@ -3,7 +3,6 @@ from typing import List, Tuple, Union
 import tensorflow as tf
 from tensorflow.keras import backend
 from tensorflow.keras import layers
-from tensorflow.keras.layers import Layer
 from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.resnet import ResNet50, ResNet101
@@ -188,7 +187,7 @@ class ResNet():
         x = layers.Activation("relu", name=name + "_out")(x)
         return x
 
-    def model(self) -> Model:
+    def build_model(self) -> Model:
         return self.model
 
 def main():
@@ -197,18 +196,18 @@ def main():
     '''ResNet-50'''
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
                       input_tensor=None, input_shape=input_shape[1:], classes=1000, pooling=None,
-                      classifier_activation="softmax").model()
+                      classifier_activation="softmax").build_model()
 
     '''tensorflow.keras.applications.resnet.ResNet50'''
     resnet50_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None, input_shape=input_shape[1:],
                             pooling=None, classes=1000)
 
-    # print(resnet50.summary())
-    # print("[INFO]: Total # of layers in ResNet-50 (no top) %d" % len(resnet50.layers))
+    print(resnet50.summary())
+    print("[INFO]: Total # of layers in ResNet-50 (no top) %d" % len(resnet50.layers))
 
-    # img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
-    # tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50.call(inputs=img_input),
-    #                                                        y=resnet50_orig.call(inputs=img_input)))
+    img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
+    tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50.call(inputs=img_input),
+                                                           y=resnet50_orig.call(inputs=img_input)))
     return
 
 if __name__ == '__main__':
