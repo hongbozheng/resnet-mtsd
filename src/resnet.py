@@ -120,13 +120,13 @@ class ResNet(Layer):
         x = layers.Activation("relu", name=name + "_out")(x)
         return x
 
-    def call(self, inputs: tf.float32, training: bool=False):
+    def call(self, inputs, training: bool=False):
         """
         layer's logic
 
         :param inputs: Input tensor, or dict/list/tuple of input tensors
         :param training: Boolean scalar tensor of Python boolean indicating
-                            whether the `call` is meant for training or inference.
+                            whether the `call` is meant for training or inference
         :return: A tensor or list/tuple of tensors
         """
         x = self.padding_3(inputs=inputs, training=training)
