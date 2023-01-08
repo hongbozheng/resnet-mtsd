@@ -6,7 +6,6 @@ from tensorflow.keras import backend
 from tensorflow.keras import layers
 from tensorflow.keras.layers import Layer
 import h5py
-import numpy as np
 from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 
