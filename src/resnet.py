@@ -3,6 +3,7 @@ from typing import List, Tuple, Union
 import tensorflow as tf
 from tensorflow.keras import backend
 from tensorflow.keras import layers
+from tensorflow.keras.layers import Layer
 from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.resnet import ResNet50, ResNet101
@@ -13,7 +14,7 @@ INPUT_CHANNELS=3
 INPUT_HEIGHT=224
 INPUT_WIDTH=224
 
-class ResNet():
+class ResNet(Layer):
     """Instantiates the ResNet_FPN architecture.
     Args:
       num_res_blocks: List[int], # of residual blocks
@@ -55,73 +56,68 @@ class ResNet():
     Returns:
       A `keras.Model` instance.
     """
-    def __init__(self,
-                 num_res_blocks: List[int],
-                 model_name: str,
-                 include_top: bool,
-                 weights: str="imagenet",
-                 input_tensor: tf.float32=None,
-                 input_shape: Tuple[int,int,int]=None,
-                 pooling: bool=None,
-                 classes: int=1000,
-                 classifier_activation: str="softmax"
-                 ) -> None:
-        if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
-            raise ValueError(
-                "The `weights` argument should be either "
-                "`None` (random initialization), `imagenet` "
-                "(pre-training on ImageNet), "
-                "or the path to the weights file to be loaded."
-            )
+    def __init__(self, num_res_blocks: List[int], include_top: bool, pooling: bool=None, num_classes: int=1000) -> None:
+        super(ResNet, self).__init__()
+        self.num_res_blocks = num_res_blocks
+        self.include_top = include_top
+        self.pooling = pooling
+        self.num_classes = num_classes
 
-        if weights == "imagenet" and include_top and classes != 1000:
-            raise ValueError(
-                'If using `weights` as `"imagenet"` with `include_top`'
-                " as true, `classes` should be 1000"
-            )
+        # input_shape = imagenet_utils.obtain_input_shape(input_shape=input_shape, default_size=224, min_size=32,
+        #                                                 data_format=backend.image_data_format(),
+        #                                                 require_flatten=include_top, weights=None)
+        # if input_tensor is None:
+        #     img_input = layers.Input(shape=input_shape)
+        # else:
+        #     if not backend.is_keras_tensor(x=input_tensor):
+        #         img_input = layers.Input(tensor=input_tensor, shape=input_shape)
+        #     else:
+        #         img_input = input_tensor
 
-        input_shape = imagenet_utils.obtain_input_shape(input_shape=input_shape, default_size=224, min_size=32,
-                                                        data_format=backend.image_data_format(),
-                                                        require_flatten=include_top, weights=None)
-        if input_tensor is None:
-            img_input = layers.Input(shape=input_shape)
-        else:
-            if not backend.is_keras_tensor(x=input_tensor):
-                img_input = layers.Input(tensor=input_tensor, shape=input_shape)
-            else:
-                img_input = input_tensor
+        # x = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")(img_input)
 
-        x = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")(img_input)
+        # x = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", name="conv1_conv")(x)
+        # x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="conv1_bn")(x)
+        # x = layers.Activation("relu", name="conv1_relu")(x)
 
-        x = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", name="conv1_conv")(x)
-        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="conv1_bn")(x)
-        x = layers.Activation("relu", name="conv1_relu")(x)
+        # x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")(x)
+        # x = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")(x)
 
-        x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")(x)
-        x = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")(x)
+        # x = self._res_blk_stack(x=x, blocks=num_res_blocks[0], filters=64, strides=(1,1), use_bias=True, name="conv2")
+        # x = self._res_blk_stack(x=x, blocks=num_res_blocks[1], filters=128, strides=(2,2), use_bias=True, name="conv3")
+        # x = self._res_blk_stack(x=x, blocks=num_res_blocks[2], filters=256, strides=(2,2), use_bias=True, name="conv4")
+        # x = self._res_blk_stack(x=x, blocks=num_res_blocks[3], filters=512, strides=(2,2), use_bias=True, name="conv5")
 
-        x = self._res_blk_stack(x=x, blocks=num_res_blocks[0], filters=64, strides=(1,1), use_bias=True, name="conv2")
-        x = self._res_blk_stack(x=x, blocks=num_res_blocks[1], filters=128, strides=(2,2), use_bias=True, name="conv3")
-        x = self._res_blk_stack(x=x, blocks=num_res_blocks[2], filters=256, strides=(2,2), use_bias=True, name="conv4")
-        x = self._res_blk_stack(x=x, blocks=num_res_blocks[3], filters=512, strides=(2,2), use_bias=True, name="conv5")
+        # if include_top:
+        #     x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
+        #     imagenet_utils.validate_activation(classifier_activation=classifier_activation, weights=weights)
+        #     x = layers.Dense(units=classes, activation="softmax", name="predictions")(x)
+        # else:
+        #     if pooling == "avg":
+        #         x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
+        #     elif pooling == "max":
+        #         x = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")(x)
 
-        if include_top:
-            x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
-            imagenet_utils.validate_activation(classifier_activation=classifier_activation, weights=weights)
-            x = layers.Dense(units=classes, activation="softmax", name="predictions")(x)
-        else:
-            if pooling == "avg":
-                x = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")(x)
-            elif pooling == "max":
-                x = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")(x)
+        self.padding_3 = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")
+        self.conv7x7 = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", name="conv1_conv")
+        self.bn = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="conv1_bn")
+        self.relu = layers.Activation("relu", name="conv1_relu")
 
-        self.model = Model(inputs=img_input, outputs=x, name=model_name)
+        self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")
+        self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")
 
-        if weights == "imagenet":
-            self.model.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
-                                    by_name=False, skip_mismatch=False, options=None)
-        elif weights is not None:
-            self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
+        self.global_avgpool = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")
+        self.global_maxpool = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")
+
+        self.dense = layers.Dense(units=self.num_classes, activation="softmax", name="predictions")
+
+        # self.model = Model(inputs=img_input, outputs=x, name=model_name)
+
+        # if weights == "imagenet":
+        #     self.model.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
+        #                             by_name=False, skip_mismatch=False, options=None)
+        # elif weights is not None:
+        #     self.model.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
 
     def _res_blk_stack(self,
                        x: tf.float32,
@@ -188,16 +184,74 @@ class ResNet():
         x = layers.Activation("relu", name=name + "_out")(x)
         return x
 
-    def build_model(self) -> Model:
-        return self.model
+    def call(self, inputs: tf.float32, training: bool=False):
+        x = self.padding_3(inputs=inputs, training=training)
+        x = self.conv7x7(inputs=x, training=training)
+        x = self.bn(inputs=x, training=training)
+        x = self.relu(inputs=x, training=training)
+        x = self.padding(inputs=x, training=training)
+        x = self.maxpool(inputs=x, training=training)
+        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[0], filters=64, strides=(1,1), use_bias=True, name="conv2")
+        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[1], filters=128, strides=(2,2), use_bias=True, name="conv3")
+        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[2], filters=256, strides=(2,2), use_bias=True, name="conv4")
+        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[3], filters=512, strides=(2,2), use_bias=True, name="conv5")
+
+        if self.include_top:
+            x = self.global_avgpool(inputs=x, training=training)
+            x = self.dense(inputs=x, training=training)
+        else:
+            if self.pooling == "avg":
+                x = self.global_avgpool(inputs=x, training=training)
+            elif self.pooling == "max":
+                x = self.global_maxpool(inputs=x, training=training)
+        return x
+
+    def model(self,
+              name: str,
+              weights: str="imagenet",
+              input_tensor: tf.float32=None,
+              input_shape: tf.float32=None
+              ) -> Model:
+        if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
+            raise ValueError(
+                "The `weights` argument should be either "
+                "`None` (random initialization), `imagenet` "
+                "(pre-training on ImageNet), "
+                "or the path to the weights file to be loaded."
+            )
+
+        if weights == "imagenet" and self.include_top and self.classes != 1000:
+            raise ValueError(
+                'If using `weights` as `"imagenet"` with `include_top`'
+                " as true, `classes` should be 1000"
+            )
+
+        input_shape = imagenet_utils.obtain_input_shape(input_shape=input_shape, default_size=224, min_size=32,
+                                                        data_format=backend.image_data_format(),
+                                                        require_flatten=self.include_top, weights=None)
+        if input_tensor is None:
+            img_input = layers.Input(shape=input_shape)
+        else:
+            if not backend.is_keras_tensor(x=input_tensor):
+                img_input = layers.Input(tensor=input_tensor, shape=input_shape)
+            else:
+                img_input = input_tensor
+
+        resnet = Model(inputs=img_input, outputs=self.call(inputs=img_input), name=name)
+
+        if weights == "imagenet":
+            resnet.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
+                                by_name=False, skip_mismatch=False, options=None)
+        elif weights is not None:
+            resnet.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
+        return resnet
 
 def main():
     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 
     '''ResNet-50'''
-    resnet50_backbone = ResNet(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
-                               input_tensor=None, input_shape=input_shape[1:], classes=1000, pooling=None,
-                               classifier_activation="softmax").build_model()
+    resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, pooling=None, num_classes=1000)
+    resnet50_backbone = resnet50.model(name="ResNet-50", weights="imagenet", input_tensor=None, input_shape=input_shape[1:])
 
     '''tensorflow.keras.applications.resnet.ResNet50'''
     resnet50_backbone_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None, input_shape=input_shape[1:],
