@@ -1,5 +1,5 @@
 import config
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, Dict
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import backend
@@ -139,22 +139,38 @@ class ResNet(Layer):
     def sequential(self) -> keras.Sequential:
         return self.resnet
 
-    def _load_weights(self, weights):
-        for layer in self.resnet.layers:
-            print(layer)
-            print(layer.weights)
+    def _load_weights_from_hdf5_group(self, weights) -> Dict:
+        weights_dict = {}
+        h5 = h5py.File(weights, "r")
+        for group in h5.keys():
+            print("-"*10)
+            print(group)
+            for layer_name in h5[group].keys():
+                print("    "+layer_name)
+                layer_weights = []
+                for attr in h5[group][layer_name].keys():
+                    print("        "+attr)
+                    # if layer_name == "conv1_bn":
+                    print(attr, h5[group][layer_name][attr][:])
+                    print(attr, h5[group][layer_name][attr][:].shape)
+                    layer_weights.append(h5[group][layer_name][attr][:])
+                layer_weights.reverse()
+                weights_dict[layer_name] = layer_weights
+        return weights_dict
 
-        # with h5py.File(weights, "r") as f:
-        #     for group in f.keys():
-        #         print("-"*10)
-        #         print(group)
-        #         for dset in f[group].keys():
-        #             print("    "+dset)
-        #             for d in f[group][dset].keys():
-        #                 print("        "+d)
-        #                 print(f[group][dset][d][:])
-            # print(f["layer_names"])
-            # print(f["model_weights"])
+    def _load_weights(self, weights):
+        weights_dict = self._load_weights_from_hdf5_group(weights=weights)
+
+        for layer in self.resnet.layers:
+            # print(layer.name)
+            if layer.name == "conv1_conv":
+                # print(weights_dict[layer.name][0])
+                # print(weights_dict[layer.name][1])
+                layer.set_weights(weights_dict[layer.name])
+            if layer.name == "conv5_x":
+                print("--", len(layer.get_weights()))
+                for w in layer.get_weights():
+                    print(w.shape)
 
     def model(self, weights: str="imagenet", input_tensor=None, input_shape: Tuple[int,int,int]=None, name: str=None) -> Model:
         if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
