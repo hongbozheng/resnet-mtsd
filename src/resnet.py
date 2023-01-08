@@ -6,6 +6,7 @@ from tensorflow.keras import backend
 from tensorflow.keras import layers
 from tensorflow.keras.layers import Layer
 import h5py
+import numpy as np
 from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 
@@ -88,29 +89,11 @@ class ResBlkStack(Layer):
 class ResNet(Layer):
     def __init__(self,
                  num_res_blocks: List[int],
-                 include_top: bool,
-                 weights :str="imagenet",
                  pooling=None,
                  classes: int=1000,
                  classifier_activation: str="softmax"
                  ) -> None:
         super(ResNet, self).__init__()
-
-        if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
-            raise ValueError(
-                "The `weights` argument should be either "
-                "`None` (random initialization), `imagenet` "
-                "(pre-training on ImageNet), "
-                "or the path to the weights file to be loaded."
-            )
-
-        if weights == "imagenet" and include_top and classes != 1000:
-            raise ValueError(
-                'If using `weights` as `"imagenet"` with `include_top`'
-                " as true, `classes` should be 1000"
-            )
-
-        self.include_top = include_top
         self.pooling = pooling
         self.resnet = keras.Sequential()
         self.padding_3 = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")
@@ -128,11 +111,6 @@ class ResNet(Layer):
         self.dense = layers.Dense(units=classes, activation="softmax", name="predictions")
         self._build()
 
-        # if weights == "imagenet":
-        #     self._load_weights(weights="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5")
-        # elif weights is not None:
-        #     pass
-
     def _build(self) -> None:
         self.resnet.add(self.padding_3)
         self.resnet.add(self.conv7x7)
@@ -148,20 +126,11 @@ class ResNet(Layer):
         self.resnet.add(self.res_blk_stack3)
         self.res_blk_stack4._name = "conv5_x"
         self.resnet.add(self.res_blk_stack4)
-        if self.include_top:
-            self.resnet.add(self.global_avg_pooling)
-            self.resnet.add(self.dense)
-        else:
-            if self.pooling == "avg":
-                self.resnet.add(self.global_avg_pooling)
-            elif self.pooling == "max":
-                self.resnet.add(self.global_max_pooling)
 
-    def _load_weights(self, weights):
-        with h5py.File(weights, "r") as f:
-            print(f.attrs)
-            print(f["layer_names"])
-            print(f["model_weights"])
+        if self.pooling == "avg":
+            self.resnet.add(self.global_avg_pooling)
+        elif self.pooling == "max":
+            self.resnet.add(self.global_max_pooling)
 
     def call(self, x: tf.float32, training: bool=False) -> tf.float32:
         x = self.resnet.call(inputs=x, training=training)
@@ -170,11 +139,35 @@ class ResNet(Layer):
     def sequential(self) -> keras.Sequential:
         return self.resnet
 
-    def model(self, input_tensor=None, input_shape: Tuple[int,int,int]=None, name: str=None) -> Model:
-        input_shape = imagenet_utils.obtain_input_shape(input_shape=input_shape, default_size=224, min_size=32,
-                                                        data_format=backend.image_data_format(),
-                                                        require_flatten=self.include_top, weights=None)
+    def _load_weights(self, weights):
+        for layer in self.resnet.layers:
+            print(layer)
+            print(layer.weights)
 
+        # with h5py.File(weights, "r") as f:
+        #     for group in f.keys():
+        #         print("-"*10)
+        #         print(group)
+        #         for dset in f[group].keys():
+        #             print("    "+dset)
+        #             for d in f[group][dset].keys():
+        #                 print("        "+d)
+        #                 print(f[group][dset][d][:])
+            # print(f["layer_names"])
+            # print(f["model_weights"])
+
+    def model(self, weights: str="imagenet", input_tensor=None, input_shape: Tuple[int,int,int]=None, name: str=None) -> Model:
+        if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
+            raise ValueError(
+                "The `weights` argument should be either "
+                "`None` (random initialization), `imagenet` "
+                "(pre-training on ImageNet), "
+                "or the path to the weights file to be loaded."
+            )
+
+        input_shape = imagenet_utils.obtain_input_shape(input_shape=input_shape, default_size=224, min_size=32,
+                                                        data_format=backend.image_data_format(), require_flatten=False,
+                                                        weights=None)
         if input_tensor is None:
             img_input = layers.Input(shape=input_shape)
         else:
@@ -183,14 +176,22 @@ class ResNet(Layer):
             else:
                 img_input = input_tensor
 
-        return Model(inputs=img_input, outputs=self.call(x=img_input), name=name)
+        resnet = Model(inputs=img_input, outputs=self.call(x=img_input), name=name)
+
+        if weights == "imagenet":
+            self._load_weights(weights="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5")
+        elif weights is not None:
+            raise NotImplementedError(
+                "This ResNet backbone only allows 'imagenet' pretrained weights"
+            )
+        return resnet
 
 def main():
     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
-    resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, weights="imagenet", pooling="avg", classes=1000,
-                      classifier_activation="softmax")
-    resnet50_model = resnet50.model(input_tensor=None,input_shape=input_shape[1:], name="ResNet-50 Backbone")
-    print(resnet50_model.summary())
+    resnet50 = ResNet(num_res_blocks=[3,4,6,3], pooling="avg", classes=1000, classifier_activation="softmax")
+    resnet50_backbone = resnet50.model(input_tensor=None,input_shape=input_shape[1:], name="ResNet-50 Backbone")
+    print(resnet50_backbone.summary())
+    print("[INFO]: Total # of layers in ResNet-50 backbone %d" % len(resnet50_backbone.layers))
     return
 
 if __name__ == "__main__":
