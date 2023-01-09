@@ -47,11 +47,11 @@ class ResNet(Layer):
         self.bn = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="conv1_bn")
         self.relu = layers.Activation("relu", name="conv1_relu")
 
-        self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")
-        self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")
+        self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="conv2_padding")
+        self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="conv2_maxpool")
 
-        self.global_avgpool = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="avg_pool")
-        self.global_maxpool = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")
+        self.global_avgpool = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(), name="global_avgpool")
+        self.global_maxpool = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="global_maxpool")
 
         self.dense = layers.Dense(units=num_classes, activation="softmax", name="predictions")
 
@@ -107,17 +107,17 @@ class ResNet(Layer):
 
         x = layers.Conv2D(filters=filters, kernel_size=(1,1), strides=strides, padding="VALID", use_bias=use_bias, name=name + "_1_conv")(x)
         x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_1_bn")(x)
-        x = layers.Activation("relu", name=name + "_1_relu")(x)
+        x = layers.Activation("relu", name=name + "_relu1")(x)
 
         x = layers.Conv2D(filters=filters, kernel_size=(3,3), strides=(1,1), padding="SAME", use_bias=use_bias, name=name + "_2_conv")(x)
         x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_2_bn")(x)
-        x = layers.Activation("relu", name=name + "_2_relu")(x)
+        x = layers.Activation("relu", name=name + "_relu2")(x)
 
         x = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=use_bias, name=name + "_3_conv")(x)
         x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_3_bn")(x)
 
         x = layers.Add(name=name + "_add")([shortcut, x])
-        x = layers.Activation("relu", name=name + "_out")(x)
+        x = layers.Activation("relu", name=name + "_relu3")(x)
         return x
 
     def call(self, inputs, training: bool=False):
@@ -188,7 +188,7 @@ class ResNet(Layer):
                                                         data_format=backend.image_data_format(),
                                                         require_flatten=self.include_top, weights=None)
         if input_tensor is None:
-            img_input = layers.Input(shape=input_shape)
+            img_input = layers.Input(shape=input_shape, name="img_input")
         else:
             if not backend.is_keras_tensor(x=input_tensor):
                 img_input = layers.Input(tensor=input_tensor, shape=input_shape)
@@ -220,6 +220,8 @@ def main():
     print("[INFO]: Total # of layers in ResNet-50 (no top) %d" % len(resnet50_backbone.layers))
 
     img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
+    print(resnet50_backbone.call(inputs=img_input))
+    print(resnet50_backbone_orig.call(inputs=img_input))
     tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50_backbone.call(inputs=img_input),
                                                            y=resnet50_backbone_orig.call(inputs=img_input)))
     return
