@@ -1,6 +1,9 @@
 import config
+from typing import Tuple
 from resnet import ResNet
+import tensorflow as tf
 from tensorflow import keras
+from tensorflow.keras import backend
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
 
@@ -12,16 +15,13 @@ INPUT_WIDTH=224
 INPUT_SHAPE = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 
 class Classifier(keras.Model):
-    def __int__(self):
+    def __init__(self, resnet_backbone: keras.Model, num_classes: int):
         """
         Instantiates classifier with ResNet backbone
         """
         super(Classifier, self).__init__()
-        '''ResNet-50 backbone'''
-        self.resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, pooling="avg", num_classes=1000)
-        # self.resnet_backbone = resnet50.model(name="ResNet-50", weights="imagenet", input_tensor=None,
-        #                                       input_shape=INPUT_SHAPE[1:])
-        self.dense = layers.Dense(units=MTSD_CLASSES, activation="softmax", name="predictions")
+        self.resnet_backbone = resnet_backbone
+        self.dense = layers.Dense(units=num_classes, activation="softmax", name="predictions")
 
     def call(self, inputs, training: bool=None, mask: bool=None):
         """
@@ -44,25 +44,52 @@ class Classifier(keras.Model):
         :return:  A tensor if there is a single output, or
                      a list of tensors if there are more than one outputs
         """
-        # x = self.resnet_backbone.call(inputs=inputs, training=training)
-        x = self.resnet50(inputs=inputs, training=training)
+        x = self.resnet_backbone(inputs=inputs, training=training)
         x = self.dense(x)
         return x
 
-    def model(self):
-        img_input = layers.Input(shape=INPUT_SHAPE)
-        clf = Model(inputs=img_input, outputs=self.call(inputs=img_input, training=False, mask=None))
-        return clf
+    def model(self, input_shape: Tuple[int,int,int], input_tensor: layers.Input=None, name: str="Classifier") -> Model:
+        """
+        creates a `keras.Model` for ResNet + Classifier
+
+        :param input_shape: optional shape tuple, only to be specified if `include_top` is False
+                            (otherwise the input shape has to be `(224, 224, 3)` (with `channels_last` data format)
+                            or `(3, 224, 224)` (with `channels_first` data format).
+                            It should have exactly 3 inputs channels.
+        :param input_tensor: optional Keras tensor (i.e. output of `layers.Input()`)
+                                to use as image input for the model.
+        :param name: string, model name.
+        :return: A `keras.Model` instance.
+        """
+        if input_tensor is None:
+            img_input = layers.Input(shape=input_shape, name="img_input")
+        else:
+            if not backend.is_keras_tensor(x=input_tensor):
+                img_input = layers.Input(tensor=input_tensor, shape=input_shape)
+            else:
+                img_input = input_tensor
+
+        classifier = Model(inputs=img_input, outputs=self.call(inputs=img_input, training=False, mask=None), name=name)
+        return classifier
 
 def main():
     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 
-    '''ResNet-50 backbone'''
+    '''ResNet-50 Backbone'''
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, pooling="avg", num_classes=1000)
-    resnet50_backbone = resnet50.model(name="ResNet-50", weights="imagenet", input_tensor=None,
-                                       input_shape=input_shape[1:])
-    classifier = Classifier().model()
+    resnet50_backbone = resnet50.model(input_shape=input_shape[1:], input_tensor=None, name="ResNet-50-Backbone",
+                                       weights="imagenet")
+    '''ResNet-50 Backbone + Classifier'''
+    classifier = Classifier(resnet_backbone=resnet50_backbone, num_classes=MTSD_CLASSES).model(
+        input_shape=input_shape[1:], input_tensor=None, name="ResNet-50 Classifier")
+
     print(classifier.summary())
+    print("[INFO]: Total # of layers in ResNet-50 Classifier %d" % len(classifier.layers))
+    img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
+    print(img_input)
+    pred = classifier.call(inputs=img_input)
+    print(pred)
+    print(tf.cast(x=tf.reshape(tensor=pred, shape=(-1,1)), dtype=tf.float32))
 
 if __name__ == "__main__":
     main()
