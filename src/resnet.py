@@ -151,22 +151,23 @@ class ResNet(Layer):
         return x
 
     def model(self,
-              name: str,
-              weights: str="imagenet",
-              input_tensor: tf.float32=None,
-              input_shape: tf.float32=None
+              input_shape: Tuple[int,int,int],
+              input_tensor: layers.Input=None,
+              name: str="ResNet",
+              weights: str="imagenet"
               ) -> Model:
         """
         creates a `keras.Model` for ResNet architecture.
 
-        :param name: string, model name.
-        :param weights: Boolean, whether to include the fully-connected layer at the top of the network.
-        :param input_tensor:  optional Keras tensor (i.e. output of `layers.Input()`)
-                                to use as image input for the model.
         :param input_shape: optional shape tuple, only to be specified if `include_top` is False
                             (otherwise the input shape has to be `(224, 224, 3)` (with `channels_last` data format)
                             or `(3, 224, 224)` (with `channels_first` data format).
                             It should have exactly 3 inputs channels.
+        :param input_tensor: optional Keras tensor (i.e. output of `layers.Input()`)
+                                to use as image input for the model.
+        :param name: string, model name.
+        :param weights: one of `None` (random initialization), 'imagenet' (pre-training on ImageNet),
+                        or the path to the weights file to be loaded.
         :return: A `keras.Model` instance.
         """
         if not (weights in {"imagenet", None} or tf.io.gfile.exists(path=weights)):
@@ -208,11 +209,12 @@ def main():
 
     '''ResNet-50'''
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, pooling="avg", num_classes=1000)
-    resnet50_backbone = resnet50.model(name="ResNet-50", weights="imagenet", input_tensor=None, input_shape=input_shape[1:])
+    resnet50_backbone = resnet50.model(input_shape=input_shape[1:], input_tensor=None, name="ResNet-50 Backbone",
+                                       weights="imagenet")
 
     '''tensorflow.keras.applications.resnet.ResNet50'''
-    resnet50_backbone_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None, input_shape=input_shape[1:],
-                                      pooling="avg", classes=1000)
+    resnet50_backbone_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None,
+                                      input_shape=input_shape[1:], pooling="avg", classes=1000)
 
     print(resnet50_backbone.summary())
     print("[INFO]: Total # of layers in ResNet-50 (no top) %d" % len(resnet50_backbone.layers))
