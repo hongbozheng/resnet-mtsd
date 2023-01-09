@@ -16,3 +16,5 @@ os.environ['TF_CPP_MIN_LOG_LEVEL']='0'
 backend.set_image_data_format('channels_first')
 
 GPUs=["GPU:0", "GPU:1"]
+
+DATA_LABEL_PATH="../data/label.txt"
