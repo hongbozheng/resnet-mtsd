@@ -17,11 +17,11 @@ INPUT_WIDTH=224
 class ResNet(Layer):
     def __init__(self, num_res_blocks: List[int], include_top: bool, pooling: str=None, num_classes: int=1000) -> None:
         """
-        Instantiates the ResNet architecture
+        Instantiates the ResNet architecture.
 
-        :param num_res_blocks: List[int], # of residual blocks in each of the 4 layers in ResNet architecture
+        :param num_res_blocks: List[int], # of residual blocks in each of the 4 layers in ResNet architecture.
         :param include_top: bool, whether to include the fully-connected layer at the top of the network.
-        :param pooling: str, optional pooling mode for feature extraction
+        :param pooling: str, optional pooling mode for feature extraction.
                         when `include_top` is `False`.
                         - `None` means that the output of the model will be
                             the 4D tensor output of the
@@ -64,15 +64,15 @@ class ResNet(Layer):
                        name: str=None
                        ) -> tf.float32:
         """
-        create a residual block stack
+        create a residual block stack.
 
-        :param x: tf.float32, input tensor
-        :param blocks: integer, blocks in the stacked residual blocks
-        :param filters: integer, filters of the bottleneck layer in a block
-        :param strides: integer or integer tuple, stride of the layer in the residual block
-        :param use_bias: Boolean, whether the layer uses a bias vector
-        :param name: string, stack label
-        :return: tf.float32, output tensor for the stacked blocks
+        :param x: tf.float32, input tensor.
+        :param blocks: integer, blocks in the stacked residual blocks.
+        :param filters: integer, filters of the bottleneck layer in a block.
+        :param strides: integer or integer tuple, stride of the layer in the residual block.
+        :param use_bias: Boolean, whether the layer uses a bias vector.
+        :param name: string, stack label.
+        :return: tf.float32, output tensor for the stacked blocks.
         """
         x = self._res_blk(x=x, filters=filters, strides=strides, use_bias=use_bias, conv_shortcut=True, name=name + "_block1")
         for i in range(2, blocks+1):
@@ -88,16 +88,16 @@ class ResNet(Layer):
                  name: str=None
                  ) -> tf.float32:
         """
-        create a residual block
+        create a residual block.
 
-        :param x: tf.float32, input tensor
-        :param filters: integer, filters of the bottleneck layer
-        :param strides: integer or integer tuple, stride of the layer
-        :param use_bias: Boolean, whether the layer uses a bias vector
+        :param x: tf.float32, input tensor.
+        :param filters: integer, filters of the bottleneck layer.
+        :param strides: integer or integer tuple, stride of the layer.
+        :param use_bias: Boolean, whether the layer uses a bias vector.
         :param conv_shortcut: Boolean, use convolution shortcut if True
-                                otherwise identity shortcut
-        :param name: string, block label
-        :return: tf.float32, output tensor for the residual block
+                                otherwise identity shortcut.
+        :param name: string, block label.
+        :return: tf.float32, output tensor for the residual block.
         """
         if conv_shortcut:
             shortcut = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=strides, padding="VALID", use_bias=use_bias, name=name + "_0_conv")(x)
@@ -122,12 +122,12 @@ class ResNet(Layer):
 
     def call(self, inputs, training: bool=False):
         """
-        layer's logic
+        layer's logic.
 
-        :param inputs: Input tensor, or dict/list/tuple of input tensors
+        :param inputs: Input tensor, or dict/list/tuple of input tensors.
         :param training: Boolean scalar tensor of Python boolean indicating
-                            whether the `call` is meant for training or inference
-        :return: A tensor or list/tuple of tensors
+                            whether the `call` is meant for training or inference.
+        :return: A tensor or list/tuple of tensors.
         """
         x = self.padding_3(inputs=inputs, training=training)
         x = self.conv7x7(inputs=x, training=training)
@@ -157,7 +157,7 @@ class ResNet(Layer):
               input_shape: tf.float32=None
               ) -> Model:
         """
-        creates a `keras.Model` for ResNet architecture
+        creates a `keras.Model` for ResNet architecture.
 
         :param name: string, model name.
         :param weights: Boolean, whether to include the fully-connected layer at the top of the network.
