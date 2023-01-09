@@ -218,17 +218,17 @@ class ResNet(Layer):
 def main():
     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 
-    '''ResNet-50'''
+    '''ResNet-50 Backbone'''
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, pooling="avg", num_classes=1000)
     resnet50_backbone = resnet50.model(input_shape=input_shape[1:], input_tensor=None, name="ResNet-50 Backbone",
                                        weights="imagenet")
 
-    '''tensorflow.keras.applications.resnet.ResNet50'''
+    '''tensorflow.keras.applications.resnet.ResNet50 Backbone'''
     resnet50_backbone_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None,
                                       input_shape=input_shape[1:], pooling="avg", classes=1000)
 
     print(resnet50_backbone.summary())
-    print("[INFO]: Total # of layers in ResNet-50 (no top) %d" % len(resnet50_backbone.layers))
+    print("[INFO]: Total # of layers in ResNet-50 Backbone %d" % len(resnet50_backbone.layers))
 
     img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
     tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50_backbone.call(inputs=img_input),
