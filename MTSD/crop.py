@@ -6,6 +6,7 @@ import json
 from PIL import Image
 
 """
+# 
 UNcoDJhGyj2BCynPufqv7A
 dtjhRwZcYld3CdbIFmQJaA
 """
@@ -38,21 +39,18 @@ def load_label(data_label_file: str) -> List:
     fp.close()
     return label
 
-def panorama(image_label: str, object: Dict, type: str) -> Image:
-    image_file = MTSD_FULLY_ANNOTATED_IMAGES_DIR + image_label + ".jpg"
-    image1 = Image.open(fp=image_file)
-    image2 = Image.open(fp=image_file)
+def panorama(image: Image, object: Dict) -> Image:
     coord1 = object["bbox"]["cross_boundary"]["left"]
     coord2 = object["bbox"]["cross_boundary"]["right"]
     box1 = (coord1["xmin"], coord1["ymin"], coord1["xmax"], coord1["ymax"])
     box2 = (coord2["xmin"], coord2["ymin"], coord2["xmax"], coord2["ymax"])
-    image1_cropped = image1.crop(box=box1)
-    image2_cropped = image2.crop(box=box2)
+    image_cropped_1 = image.copy().crop(box=box1)
+    image_cropped_2 = image.crop(box=box2)
     width = (box1[2] - box1[0]) + (box2[2] - box2[0])
     height = max((box1[3] - box1[1]), (box2[3] - box2[1]))
     image_merged = Image.new("RGB", size=(int(width), int(height)))
-    image_merged.paste(im=image1_cropped, box=(0,0))
-    image_merged.paste(im=image2_cropped, box=(int(box1[2] - box1[0]), 0))
+    image_merged.paste(im=image_cropped_1, box=(0,0))
+    image_merged.paste(im=image_cropped_2, box=(int(box1[2] - box1[0]), 0))
     return image_merged
 
 def update_num_signs(valid: bool, type: str) -> None:
@@ -77,7 +75,7 @@ def update_num_signs(valid: bool, type: str) -> None:
             INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM += 1
     return
 
-def save_cropped_image(image_cropped, image_name: str, type: str) -> None:
+def save_cropped_image(image_cropped: Image, image_name: str, type: str) -> None:
     if type == "train":
         image_cropped.save(fp=MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_CROPPED_DIR + image_name, format="jpeg")
     elif type == "val":
@@ -97,19 +95,19 @@ def filter_crop_save(image_label: str, annotation: str, type: str) -> None:
     for i, object in enumerate(objects):
         properties = object["properties"]
         if True:
+            update_num_signs(valid=True, type=type)
+            image_file = MTSD_FULLY_ANNOTATED_IMAGES_DIR + image_label + ".jpg"
+            image = Image.open(fp=image_file)
             if data["ispano"] == True and "cross_boundary" in object["bbox"]:
-                image_merged = panorama(image_label=image_label, object=object, type=type)
+                image_merged = panorama(image=image, object=object)
                 save_cropped_image(image_cropped=image_merged, image_name=image_label + '_' + str(i), type=type)
                 continue
-            update_num_signs(valid=True, type=type)
+            box = (object["bbox"]["xmin"], object["bbox"]["ymin"], object["bbox"]["xmax"], object["bbox"]["ymax"])
+            image_cropped = image.crop(box=box)
+            save_cropped_image(image_cropped=image_cropped, image_name=image_label + '_' + str(i), type=type)
+            image.close()
         else:
             update_num_signs(valid=False, type=type)
-
-        image_file = MTSD_FULLY_ANNOTATED_IMAGES_DIR + image_label + ".jpg"
-        image = Image.open(fp=image_file)
-        box = (object["bbox"]["xmin"], object["bbox"]["ymin"], object["bbox"]["xmax"], object["bbox"]["ymax"])
-        image_cropped = image.crop(box=box)
-        save_cropped_image(image_cropped=image_cropped, image_name=image_label + '_' + str(i), type=type)
     return
 
 def main():
