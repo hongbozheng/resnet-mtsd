@@ -235,5 +235,5 @@ def main():
                                                            y=resnet50_backbone_orig.call(inputs=img_input)))
     return
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
