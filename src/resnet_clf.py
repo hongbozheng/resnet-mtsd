@@ -1,7 +1,6 @@
 import config
 from typing import Tuple
 from resnet import ResNet
-import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import backend
 from tensorflow.keras import layers
