@@ -7,7 +7,7 @@ import json
 from PIL import Image
 
 """
-# Exceptions
+# Exceptions (training dataset)
 UNcoDJhGyj2BCynPufqv7A (Negative Width xmin > xmax)
 dtjhRwZcYld3CdbIFmQJaA (panorama)
 HDH5-grdWNma9j0mijo76g (1-pixel wide traffic sign, removed from .json)
