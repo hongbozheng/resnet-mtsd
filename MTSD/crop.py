@@ -6,9 +6,10 @@ import json
 from PIL import Image
 
 """
-# 
-UNcoDJhGyj2BCynPufqv7A
-dtjhRwZcYld3CdbIFmQJaA
+# Exceptions
+UNcoDJhGyj2BCynPufqv7A (Negative Width xmin > xmax)
+dtjhRwZcYld3CdbIFmQJaA (panorama)
+HDH5-grdWNma9j0mijo76g (1-pixel wide traffic sign, removed from .json)
 """
 
 MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_LABEL="splits/train.txt"
@@ -94,7 +95,7 @@ def filter_crop_save(image_label: str, annotation: str, type: str) -> None:
 
     for i, object in enumerate(objects):
         properties = object["properties"]
-        if True:
+        if True:    # optional: add filter conditions here
             update_num_signs(valid=True, type=type)
             image_file = MTSD_FULLY_ANNOTATED_IMAGES_DIR + image_label + ".jpg"
             image = Image.open(fp=image_file)
@@ -115,11 +116,9 @@ def main():
     print("[INFO]: Start cropping training dataset...")
     train_label = load_label(data_label_file=MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_LABEL)
     for label in tqdm(train_label):
-        label = "dtjhRwZcYld3CdbIFmQJaA"
         annotation_file = ANNOTATIONS_FOLDER + label + ".json"
         filter_crop_save(image_label=label, annotation=annotation_file, type="train")
-        exit(1)
-    print("[INFO]: Cropped images saved to %s" % MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_CROPPED_DIR)
+    print("[INFO]: Cropped images saved to \"%s\"" % MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_CROPPED_DIR)
 
     # crop val dataset
     print("[INFO]: Start cropping validation dataset...")
@@ -127,7 +126,7 @@ def main():
     for label in tqdm(val_label):
         annotation_file = ANNOTATIONS_FOLDER + label + ".json"
         filter_crop_save(image_label=label, annotation=annotation_file, type="val")
-    print("[INFO]: Cropped images saved to %s" % MTSD_FULLY_ANNOTATED_IMAGES_VAL_CROPPED_DIR)
+    print("[INFO]: Cropped images saved to \"%s\"" % MTSD_FULLY_ANNOTATED_IMAGES_VAL_CROPPED_DIR)
 
     # crop test dataset
     print("[INFO]: Start cropping testing dataset...")
@@ -135,14 +134,14 @@ def main():
     for label in tqdm(test_label):
         annotation_file = ANNOTATIONS_FOLDER + label + ".json"
         filter_crop_save(image_label=label, annotation=annotation_file, type="train")
-    print("[INFO]: Cropped images saved to %s" % MTSD_FULLY_ANNOTATED_IMAGES_TEST_CROPPED_DIR)
+    print("[INFO]: Cropped images saved to \"%s\"" % MTSD_FULLY_ANNOTATED_IMAGES_TEST_CROPPED_DIR)
 
-    print("[INFO]: Training Dataset # %d\tValidation Dataset # %d\tTest Dataset # %d"
-          %(VALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM, VALID_MTSD_FULLY_ANNOTATED_SIGNS_VAL_NUM,
-            VALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM))
-    print("[INFO]: Training Dataset # %d\tValidation Dataset # %d\tTest Dataset # %d"
-          % (INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM, INVALID_MTSD_FULLY_ANNOTATED_SIGNS_VAL_NUM,
-             INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM))
+    print("[INFO]: Training Dataset   # %d" % VALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM)
+    print("[INFO]: Validation Dataset # %d" % VALID_MTSD_FULLY_ANNOTATED_SIGNS_VAL_NUM)
+    print("[INFO]: Test Dataset       # %d" % VALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM)
+    print("[INFO]: Filtered out Training Dataset   # %d" % INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM)
+    print("[INFO]: Filtered out Validation Dataset # %d" % INVALID_MTSD_FULLY_ANNOTATED_SIGNS_VAL_NUM)
+    print("[INFO]: Filtered out Test Dataset       # %d" % INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM)
     return
 
 if __name__ == "__main__":
