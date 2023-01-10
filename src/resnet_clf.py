@@ -85,11 +85,6 @@ def main():
 
     print(classifier.summary())
     print("[INFO]: Total # of layers in ResNet-50 Classifier %d" % len(classifier.layers))
-    img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
-    print(img_input)
-    pred = classifier.call(inputs=img_input)
-    print(pred)
-    print(tf.cast(x=tf.reshape(tensor=pred, shape=(-1,1)), dtype=tf.float32))
 
 if __name__ == "__main__":
     main()
