@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from typing import List, Dict
+from src.utils import load_label
 from tqdm import tqdm
 import json
 from PIL import Image
@@ -33,12 +34,6 @@ VALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM=0
 INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM=0
 INVALID_MTSD_FULLY_ANNOTATED_SIGNS_VAL_NUM=0
 INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM=0
-
-def load_label(data_label_file: str) -> List:
-    fp = open(data_label_file, 'r')
-    label = fp.read().split('\n')[:-1]
-    fp.close()
-    return label
 
 def panorama(image: Image, object: Dict) -> Image:
     coord1 = object["bbox"]["cross_boundary"]["left"]
