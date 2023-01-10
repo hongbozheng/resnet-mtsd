@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import backend
 from tensorflow.keras import layers
-from tensorflow.keras.model import Model
+from tensorflow.keras.models import Model
 
 MTSD_CLASSES=401
 BATCH_SIZE=1
