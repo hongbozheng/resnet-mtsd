@@ -1,61 +1,104 @@
 import config
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import tensorflow as tf
-
-MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_images_train/"
-MTSD_FULLY_ANNOTATED_IMAGES_VAL_DIR="../MTSD/mtsd_fully_annotated_images_val/"
-MTSD_FULLY_ANNOTATED_IMAGES_TEST_DIR="../MTSD/mtsd_fully_annotated_images_test/"
-
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TRAIN_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_train/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_VAL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_val/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TEST_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_test/"
-
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_cropped_images_train/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_val/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR="../MTSD/mtsd_fully_annotated_cropped_images_test/"
 
 class MTSDLoader():
     def __init__(self,
-                 label_dir: str,
-                 image_dir: str,
-                 labels: str,
-                 label_mode: str,
-                 class_names: List,
-                 color_mode: str,
-                 batch_size: int,
-                 image_size: Tuple[int,int],
-                 shuffle: bool,
-                 seed: int,
-                 validation_split: float,
-                 interpolation: str,
-                 crop_to_aspect_ratio: bool
+                 directory: str,
+                 labels="inferred",
+                 label_mode="int",
+                 class_names=None,
+                 color_mode="rgb",
+                 batch_size=32,
+                 image_size=(256, 256),
+                 shuffle=True,
+                 seed=None,
+                 validation_split=None,
+                 subset=None,
+                 interpolation="bilinear",
+                 follow_links=False,
+                 crop_to_aspect_ratio=False,
+                 **kwargs,
                  ) -> None:
-        if labels not in ("inferred", None):
+        """
+        Generates a `tf.data.Dataset` from image files in a directory
 
-            if not isinstance(labels, (list, tuple)):
-                raise ValueError(
-                    "`labels` argument should be a list/tuple of integer labels, "
-                    "of the same size as the number of image files in the target "
-                    "directory. If you wish to infer the labels from the "
-                    "subdirectory "
-                    'names in the target directory, pass `labels="inferred"`. '
-                    "If you wish to get a dataset that only contains images "
-                    f"(no labels), pass `labels=None`. Received: labels={labels}"
-                )
-            if class_names:
-                raise ValueError(
-                    "You can only pass `class_names` if "
-                    f'`labels="inferred"`. Received: labels={labels}, and '
-                    f"class_names={class_names}"
-                )
-        if label_mode not in {"int", "categorical", "binary", None}:
-            raise ValueError(
-                '`label_mode` argument must be one of "int", '
-                '"categorical", "binary", '
-                f"or None. Received: label_mode={label_mode}"
-            )
+        If your directory structure is :
 
-        self.dataset = self._load_train_dataset(image_dir=image_dir,
+        ```
+         main_directory/
+        ...class_a/
+        ......a_image_1.jpg
+        ......a_image_2.jpg
+        ...class_b/
+        ......b_image_1.jpg
+        ......b_image_2.jpg
+        ```
+
+        Then calling `image_dataset_from_directory(main_directory,
+        labels='inferred')` will return a `tf.data.Dataset` that yields batches of
+        images from the subdirectories `class_a` and `class_b`, together with labels
+        0 and 1 (0 corresponding to `class_a` and 1 corresponding to `class_b`).
+        Supported image formats: jpeg, png, bmp, gif.
+        Animated gifs are truncated to the first frame.
+
+        :param directory: Directory where the data is located.
+                          If `labels` is "inferred", it should contain
+                          subdirectories, each containing images for a class.
+                          otherwise, the directory structure is ignored.
+        :param labels: Either "inferred" (labels are generated from the directory structure),
+                       None (no labels), or a list/tuple of integer labels of the same size
+                       as the number of image files found in the directory.
+                       Labels should be sorted according to the alphanumeric order of
+                       the image file paths (obtained via `os.walk(directory)` in Python).
+        :param label_mode: String describing the encoding of `labels`. Options are:
+                           - 'int': means that the labels are encoded as integers
+                             (e.g. for `sparse_categorical_crossentropy` loss).
+                           - 'categorical' means that the labels are
+                             encoded as a categorical vector
+                             (e.g. for `categorical_crossentropy` loss).
+                           - 'binary' means that the labels (there can be only 2)
+                             are encoded as `float32` scalars with values 0 or 1
+                             (e.g. for `binary_crossentropy`).
+                           - None (no labels).
+        :param class_names: Only valid if "labels" is "inferred". This is the explicit
+                            list of class names (must match names of subdirectories). Used
+                            to control the order of the classes
+                            (otherwise alphanumerical order is used).
+        :param color_mode: One of "grayscale", "rgb", "rgba". Default: "rgb".
+                           Whether the images will be converted to have 1, 3, or 4 channels.
+        :param batch_size: Size of the batches of data. Default: 32.
+                           If `None`, the data will not be batched
+                           (the dataset will yield individual samples).
+        :param image_size: Size to resize images to after they are read from disk,
+                           specified as `(height, width)`. Defaults to `(256, 256)`.
+                           Since the pipeline processes batches of images that must all have
+                           the same size, this must be provided.
+        :param shuffle: Whether to shuffle the data. Default: True.
+                        If set to False, sorts the data in alphanumeric order.
+        :param seed: Optional random seed for shuffling and transformations.
+        :param validation_split: Optional float between 0 and 1,
+                                 fraction of data to reserve for validation.
+        :param subset: Subset of the data to return.
+                       One of "training", "validation" or "both".
+                       Only used if `validation_split` is set.
+                       When `subset="both"`, the utility returns a tuple of two datasets
+                       (the training and validation datasets respectively).
+        :param interpolation: String, the interpolation method used when resizing images.
+                              Defaults to `bilinear`. Supports `bilinear`, `nearest`, `bicubic`,
+                              `area`, `lanczos3`, `lanczos5`, `gaussian`, `mitchellcubic`.
+        :param follow_links: Whether to visit subdirectories pointed to by symlinks.
+                             Defaults to False.
+        :param crop_to_aspect_ratio: If True, resize the images without aspect ratio distortion.
+                                     When the original aspect ratio differs from the target
+                                     aspect ratio, the output image will be cropped so as to
+                                     return the largest possible window in the image
+                                     (of size `image_size`) that matches the target aspect ratio.
+                                     By default (`crop_to_aspect_ratio=False`),
+                                     aspect ratio may not be preserved.
+        :param kwargs: Legacy keyword arguments.
+        """
+        self.dataset = self._load_train_dataset(directory=directory,
                                                 labels=labels,
                                                 label_mode=label_mode,
                                                 class_names=class_names,
@@ -65,23 +108,30 @@ class MTSDLoader():
                                                 shuffle=shuffle,
                                                 seed=seed,
                                                 validation_split=validation_split,
+                                                subset=subset,
                                                 interpolation=interpolation,
+                                                follow_links=follow_links,
                                                 crop_to_aspect_ratio=crop_to_aspect_ratio)
-    def _load_label(self):
-        
+    def _load_label(self, label_dir: str) -> List:
+        filename_list = tf.io.gfile.listdir(path=label_dir)
+        return filename_list
+
     def _load_train_dataset(self,
-                            image_dir: str,
-                            labels: str,
-                            label_mode: str,
-                            class_names: List,
-                            color_mode: str,
-                            batch_size: int,
-                            image_size: Tuple[int,int],
-                            shuffle: bool,
-                            seed: int,
-                            validation_split: float,
-                            interpolation: str,
-                            crop_to_aspect_ratio: bool
+                            directory: str,
+                            labels="inferred",
+                            label_mode="int",
+                            class_names=None,
+                            color_mode="rgb",
+                            batch_size=32,
+                            image_size=(256, 256),
+                            shuffle=True,
+                            seed=None,
+                            validation_split=None,
+                            subset=None,
+                            interpolation="bilinear",
+                            follow_links=False,
+                            crop_to_aspect_ratio=False,
+                            **kwargs,
                             ) -> tf.data.Dataset:
         return tf.keras.utils.image_dataset_from_directory(
             directory=directory,
@@ -94,7 +144,9 @@ class MTSDLoader():
             shuffle=shuffle,
             seed=seed,
             validation_split=validation_split,
+            subset=subset,
             interpolation=interpolation,
+            follow_links=follow_links,
             crop_to_aspect_ratio=crop_to_aspect_ratio
         )
 
