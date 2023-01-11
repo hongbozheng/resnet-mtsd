@@ -22,9 +22,9 @@ MTSD_FULLY_ANNOTATED_IMAGES_TEST_LABEL="../MTSD/splits/test.txt"
 MTSD_FULLY_ANNOTATED_IMAGES_DIR="../MTSD/mtsd_fully_annotated_images/"
 ANNOTATIONS_FOLDER="../MTSD/annotations/"
 
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_LABEL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_train/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_LABEL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_val/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_LABEL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_test/"
+MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TRAIN_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_train/"
+MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_VAL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_val/"
+MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TEST_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_test/"
 
 MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_images_train/"
 MTSD_FULLY_ANNOTATED_IMAGES_VAL_DIR="../MTSD/mtsd_fully_annotated_images_val/"
@@ -44,13 +44,13 @@ INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM=0
 def save_label(label: str, label_name: str, type: str) -> None:
     label_int = MTSD_classes.index(label)
     if type == "train":
-        label_file = open(file=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_LABEL_DIR + label_name + ".txt", mode="w")
+        label_file = open(file=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TRAIN_DIR + label_name + ".txt", mode="w")
         label_file.write(str(label_int))
     elif type == "val":
-        label_file = open(file=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_LABEL_DIR + label_name + ".txt", mode="w")
+        label_file = open(file=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_VAL_DIR + label_name + ".txt", mode="w")
         label_file.write(str(label_int))
     elif type == "test":
-        label_file = open(file=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_LABEL_DIR + label_name + ".txt", mode="w")
+        label_file = open(file=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TEST_DIR + label_name + ".txt", mode="w")
         label_file.write(str(label_int))
     label_file.close()
     return
@@ -134,7 +134,7 @@ def main():
     for label in tqdm(train_label):
         annotation_file = ANNOTATIONS_FOLDER + label + ".json"
         filter_label_crop_save(label=label, annotation=annotation_file, type="train")
-    print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_LABEL_DIR)
+    print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TRAIN_DIR)
     print("[INFO]: Cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR)
 
     # create labels and crop images for val dataset
@@ -143,7 +143,7 @@ def main():
     for label in tqdm(val_label):
         annotation_file = ANNOTATIONS_FOLDER + label + ".json"
         filter_label_crop_save(label=label, annotation=annotation_file, type="val")
-    print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_LABEL_DIR)
+    print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_VAL_DIR)
     print("[INFO]: Cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR)
 
     # create labels and crop images for test dataset
@@ -152,7 +152,7 @@ def main():
     for label in tqdm(test_label):
         annotation_file = ANNOTATIONS_FOLDER + label + ".json"
         filter_label_crop_save(label=label, annotation=annotation_file, type="train")
-    print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_LABEL_DIR)
+    print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TEST_DIR)
     print("[INFO]: Cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR)
 
     print("[INFO]: Training Dataset   # %d" % VALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM)
