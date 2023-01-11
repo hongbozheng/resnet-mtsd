@@ -30,18 +30,18 @@ class Classifier(keras.Model):
         all ops in the graph to the new inputs
         (e.g. build a new computational graph from the provided inputs)
         Note: This method should not be called directly. It is only meant to be
-                overridden when subclassing `tf.keras.Model`
+              overridden when subclassing `tf.keras.Model`
         To call a model on an input, always use the `__call__()` method,
         i.e. `model(inputs)`, which relies on the underlying `call()` method
 
         :param inputs: Input tensor, or dict/list/tuple of input tensors
         :param training: Boolean or boolean scalar tensor, indicating whether to
-                            run the `Network` in training mode or inference mode
+                         run the `Network` in training mode or inference mode
         :param mask: A mask or list of masks. A mask can be either a boolean tensor
-                        or None (no mask). For more details, check the guide
-                        [here](https://www.tensorflow.org/guide/keras/masking_and_padding)
+                     or None (no mask). For more details, check the guide
+                     [here](https://www.tensorflow.org/guide/keras/masking_and_padding)
         :return:  A tensor if there is a single output, or
-                     a list of tensors if there are more than one outputs
+                  a list of tensors if there are more than one outputs
         """
         x = self.resnet_backbone(inputs=inputs, training=training)
         x = self.dense(x)
@@ -56,7 +56,7 @@ class Classifier(keras.Model):
                             or `(3, 224, 224)` (with `channels_first` data format).
                             It should have exactly 3 inputs channels.
         :param input_tensor: optional Keras tensor (i.e. output of `layers.Input()`)
-                                to use as image input for the model.
+                             to use as image input for the model.
         :param name: string, model name.
         :return: A `keras.Model` instance.
         """
