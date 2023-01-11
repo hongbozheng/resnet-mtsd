@@ -135,7 +135,6 @@ def main():
     print("[INFO]: Start classifying and cropping training dataset...")
     train_label = load_label(data_label_file=MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_LABEL)
     for file_label in tqdm(train_label):
-        print(file_label)
         annot_json_file = ANNOTATIONS_FOLDER + file_label + ".json"
         filter_clf_crop_save(file_label=file_label, annot_json_file=annot_json_file, type="train")
     print("[INFO]: Classified & cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR)
