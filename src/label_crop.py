@@ -93,42 +93,42 @@ def panorama(image: Image, object: Dict) -> Image:
 
 def save_cropped_image(image_cropped: Image, image_name: str, type: str) -> None:
     if type == "train":
-        image_cropped.save(fp=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR + image_name, format="jpeg")
+        image_cropped.save(fp=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR + image_name + ".jpeg", format="jpeg")
     elif type == "val":
-        image_cropped.save(fp=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR + image_name, format="jpeg")
+        image_cropped.save(fp=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR + image_name + ".jpeg", format="jpeg")
     elif type == "test":
-        image_cropped.save(fp=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR + image_name, format="jpeg")
+        image_cropped.save(fp=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR + image_name + ".jpeg", format="jpeg")
     return
 
 def filter_label_crop_save(label: str, annotation: str, type: str) -> None:
     if type not in {"train", "val", "test"}:
         raise TypeError("[ERROR]: Invalid Type, should be one of {'train', 'val', 'test'}")
 
-    fp = open(file=annotation, mode='r')
+    fp = open(file=annotation, mode="r")
     data = json.load(fp=fp)
     objects = data["objects"]
 
     for i, object in enumerate(objects):
         properties = object["properties"]
-        if True:    # optional: add filter conditions here
+        if True:    # optional: add filter conditions in `properties` dict here
             save_label(label=object["label"], label_name=label + '_' + str(i), type=type)
             update_num_signs(valid=True, type=type)
-            # image_file = MTSD_FULLY_ANNOTATED_IMAGES_DIR + label + ".jpg"
-            # image = Image.open(fp=image_file)
-            # if data["ispano"] == True and "cross_boundary" in object["bbox"]:
-            #     image_merged = panorama(image=image, object=object)
-            #     save_cropped_image(image_cropped=image_merged, image_name=label + '_' + str(i), type=type)
-            #     continue
-            # box = (object["bbox"]["xmin"], object["bbox"]["ymin"], object["bbox"]["xmax"], object["bbox"]["ymax"])
-            # image_cropped = image.crop(box=box)
-            # save_cropped_image(image_cropped=image_cropped, image_name=label + '_' + str(i), type=type)
-            # image.close()
+            image_file = MTSD_FULLY_ANNOTATED_IMAGES_DIR + label + ".jpg"
+            image = Image.open(fp=image_file)
+            if data["ispano"] == True and "cross_boundary" in object["bbox"]:
+                image_merged = panorama(image=image, object=object)
+                save_cropped_image(image_cropped=image_merged, image_name=label + '_' + str(i), type=type)
+                continue
+            box = (object["bbox"]["xmin"], object["bbox"]["ymin"], object["bbox"]["xmax"], object["bbox"]["ymax"])
+            image_cropped = image.crop(box=box)
+            save_cropped_image(image_cropped=image_cropped, image_name=label + '_' + str(i), type=type)
+            image.close()
         else:
             update_num_signs(valid=False, type=type)
     return
 
 def main():
-    # create label and crop training dataset
+    # create labels and crop images for training dataset
     print("[INFO]: Start labeling and cropping training dataset...")
     train_label = load_label(data_label_file=MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_LABEL)
     for label in tqdm(train_label):
@@ -137,7 +137,7 @@ def main():
     print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_LABEL_DIR)
     print("[INFO]: Cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR)
 
-    # create label and crop val dataset
+    # create labels and crop images for val dataset
     print("[INFO]: Start labeling and cropping validation dataset...")
     val_label = load_label(data_label_file=MTSD_FULLY_ANNOTATED_IMAGES_VAL_LABEL)
     for label in tqdm(val_label):
@@ -146,14 +146,14 @@ def main():
     print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_LABEL_DIR)
     print("[INFO]: Cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR)
 
-    # create label and crop test dataset
-    # print("[INFO]: Start labeling and cropping testing dataset...")
-    # test_label = load_label(data_label_file=MTSD_FULLY_ANNOTATED_IMAGES_TEST_LABEL)
-    # for label in tqdm(test_label):
-    #     annotation_file = ANNOTATIONS_FOLDER + label + ".json"
-    #     filter_label_crop_save(label=label, annotation=annotation_file, type="train")
-    # print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_LABEL_DIR)
-    # print("[INFO]: Cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR)
+    # create labels and crop images for test dataset
+    print("[INFO]: Start labeling and cropping testing dataset...")
+    test_label = load_label(data_label_file=MTSD_FULLY_ANNOTATED_IMAGES_TEST_LABEL)
+    for label in tqdm(test_label):
+        annotation_file = ANNOTATIONS_FOLDER + label + ".json"
+        filter_label_crop_save(label=label, annotation=annotation_file, type="train")
+    print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_LABEL_DIR)
+    print("[INFO]: Cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR)
 
     print("[INFO]: Training Dataset   # %d" % VALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM)
     print("[INFO]: Validation Dataset # %d" % VALID_MTSD_FULLY_ANNOTATED_SIGNS_VAL_NUM)
