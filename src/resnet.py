@@ -24,14 +24,14 @@ class ResNet(Layer):
         :param pooling: str, optional pooling mode for feature extraction.
                         when `include_top` is `False`.
                         - `None` means that the output of the model will be
-                            the 4D tensor output of the
-                            last convolutional layer.
+                           the 4D tensor output of the
+                           last convolutional layer.
                         - `avg` means that global average pooling
-                            will be applied to the output of the
-                            last convolutional layer, and thus
-                            the output of the model will be a 2D tensor.
+                           will be applied to the output of the
+                           last convolutional layer, and thus
+                           the output of the model will be a 2D tensor.
                         - `max` means that global max pooling will
-                            be applied.
+                           be applied.
         :param num_classes: int, optional number of classes to classify images into,
                             only to be specified if `include_top` is True, and
                             if no `weights` argument is specified.
@@ -98,7 +98,7 @@ class ResNet(Layer):
         :param strides: integer or integer tuple, stride of the layer.
         :param use_bias: Boolean, whether the layer uses a bias vector.
         :param conv_shortcut: Boolean, use convolution shortcut if True
-                                otherwise identity shortcut.
+                              otherwise identity shortcut.
         :param name: string, block label.
         :return: tf.float32, output tensor for the residual block.
         """
@@ -133,7 +133,7 @@ class ResNet(Layer):
 
         :param inputs: Input tensor, or dict/list/tuple of input tensors.
         :param training: Boolean scalar tensor of Python boolean indicating
-                            whether the `call` is meant for training or inference.
+                         whether the `call` is meant for training or inference.
         :return: A tensor or list/tuple of tensors.
         """
         x = self.padding_3(inputs=inputs, training=training)
@@ -175,7 +175,7 @@ class ResNet(Layer):
                             or `(3, 224, 224)` (with `channels_first` data format).
                             It should have exactly 3 inputs channels.
         :param input_tensor: optional Keras tensor (i.e. output of `layers.Input()`)
-                                to use as image input for the model.
+                             to use as image input for the model.
         :param name: string, model name.
         :param weights: one of `None` (random initialization), 'imagenet' (pre-training on ImageNet),
                         or the path to the weights file to be loaded.
