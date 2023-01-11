@@ -98,6 +98,31 @@ class MTSDLoader():
                                      By default (`crop_to_aspect_ratio=False`),
                                      aspect ratio may not be preserved.
         :param kwargs: Legacy keyword arguments.
+
+        A `tf.data.Dataset` object.
+        - If `label_mode` is None, it yields `float32` tensors of shape
+          `(batch_size, image_size[0], image_size[1], num_channels)`,
+          encoding images (see below for rules regarding `num_channels`).
+        - Otherwise, it yields a tuple `(images, labels)`, where `images`
+          has shape `(batch_size, image_size[0], image_size[1], num_channels)`,
+          and `labels` follows the format described below.
+
+        Rules regarding labels format:
+            - if `label_mode` is `int`, the labels are an `int32` tensor of shape
+              `(batch_size,)`.
+            - if `label_mode` is `binary`, the labels are a `float32` tensor of
+              1s and 0s of shape `(batch_size, 1)`.
+            - if `label_mode` is `categorical`, the labels are a `float32` tensor
+              of shape `(batch_size, num_classes)`, representing a one-hot
+              encoding of the class index.
+
+        Rules regarding number of channels in the yielded images:
+            - if `color_mode` is `grayscale`,
+              there's 1 channel in the image tensors.
+            - if `color_mode` is `rgb`,
+              there are 3 channels in the image tensors.
+            - if `color_mode` is `rgba`,
+              there are 4 channels in the image tensors.
         """
         self.dataset = image_dataset_from_directory(directory=directory,
                                                     labels=labels,
