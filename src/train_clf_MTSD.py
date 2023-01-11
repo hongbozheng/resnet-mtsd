@@ -33,7 +33,7 @@ def main():
     print("[INFO]: Total # of layers in ResNet-50 Classifier %d" % len(classifier.layers))
 
     mtsd_loader = MTSDLoader(directory=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR,
-                             labels="",
+                             labels="inferred",
                              label_mode="int",
                              class_names=False,
                              color_mode="rgb",
@@ -44,6 +44,7 @@ def main():
                              validation_split=None,
                              interpolation="bilinear",
                              crop_to_aspect_ratio=False)
+    train_ds = mtsd_loader.dataset
 
     # img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
     # print(img_input)
