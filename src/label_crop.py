@@ -22,13 +22,13 @@ MTSD_FULLY_ANNOTATED_IMAGES_TEST_LABEL="../MTSD/splits/test.txt"
 MTSD_FULLY_ANNOTATED_IMAGES_DIR="../MTSD/mtsd_fully_annotated_images/"
 ANNOTATIONS_FOLDER="../MTSD/annotations/"
 
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TRAIN_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_train/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_VAL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_val/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TEST_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_test/"
-
 MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_images_train/"
 MTSD_FULLY_ANNOTATED_IMAGES_VAL_DIR="../MTSD/mtsd_fully_annotated_images_val/"
 MTSD_FULLY_ANNOTATED_IMAGES_TEST_DIR="../MTSD/mtsd_fully_annotated_images_test/"
+
+MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TRAIN_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_train/"
+MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_VAL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_val/"
+MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TEST_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_test/"
 
 MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_cropped_images_train/"
 MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_val/"
