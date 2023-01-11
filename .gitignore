@@ -3,6 +3,6 @@ venv/
 __pycache__/
 weights/
 MTSD/annotations
-MTSD/mtsd_fully_annotated_images*
+MTSD/mtsd_fully_annotated*
 MTSD/splits
 data/
