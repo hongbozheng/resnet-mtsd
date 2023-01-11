@@ -2,6 +2,7 @@
 
 from typing import Dict
 from utils import load_label
+import os
 from tqdm import tqdm
 import json
 from PIL import Image
@@ -13,8 +14,8 @@ dtjhRwZcYld3CdbIFmQJaA (panorama)
 HDH5-grdWNma9j0mijo76g (1-pixel wide traffic sign, removed from .json)
 """
 
-MTSD_CLASSES="../data/label.txt"
-MTSD_classes = load_label(data_label_file=MTSD_CLASSES)
+MTSD_CLASSES_FILE="../data/label.txt"
+MTSD_classes = load_label(data_label_file=MTSD_CLASSES_FILE)
 MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_LABEL="../MTSD/splits/train.txt"
 MTSD_FULLY_ANNOTATED_IMAGES_VAL_LABEL="../MTSD/splits/val.txt"
 MTSD_FULLY_ANNOTATED_IMAGES_TEST_LABEL="../MTSD/splits/test.txt"
@@ -25,10 +26,6 @@ ANNOTATIONS_FOLDER="../MTSD/annotations/"
 MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_images_train/"
 MTSD_FULLY_ANNOTATED_IMAGES_VAL_DIR="../MTSD/mtsd_fully_annotated_images_val/"
 MTSD_FULLY_ANNOTATED_IMAGES_TEST_DIR="../MTSD/mtsd_fully_annotated_images_test/"
-
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TRAIN_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_train/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_VAL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_val/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TEST_DIR="../MTSD/mtsd_fully_annotated_cropped_images_label_test/"
 
 MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_cropped_images_train/"
 MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_val/"
@@ -41,18 +38,20 @@ INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM=0
 INVALID_MTSD_FULLY_ANNOTATED_SIGNS_VAL_NUM=0
 INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM=0
 
-def save_label(label: str, label_name: str, type: str) -> None:
-    label_int = MTSD_classes.index(label)
-    if type == "train":
-        label_file = open(file=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TRAIN_DIR + label_name + ".txt", mode="w")
-        label_file.write(str(label_int))
-    elif type == "val":
-        label_file = open(file=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_VAL_DIR + label_name + ".txt", mode="w")
-        label_file.write(str(label_int))
-    elif type == "test":
-        label_file = open(file=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TEST_DIR + label_name + ".txt", mode="w")
-        label_file.write(str(label_int))
-    label_file.close()
+def check_dirs() -> None:
+    for cls in MTSD_classes:
+        if os.path.exists(path=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR + cls):
+            continue
+        else:
+            os.makedirs(name=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR + cls)
+        if os.path.exists(path=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR + cls):
+            continue
+        else:
+            os.makedirs(name=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR + cls)
+        if os.path.exists(path=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR + cls):
+            continue
+        else:
+            os.makedirs(name=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR + cls)
     return
 
 def update_num_signs(valid: bool, type: str) -> None:
@@ -100,60 +99,62 @@ def save_cropped_image(image_cropped: Image, image_name: str, type: str) -> None
         image_cropped.save(fp=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR + image_name + ".jpeg", format="jpeg")
     return
 
-def filter_label_crop_save(label: str, annotation: str, type: str) -> None:
+def filter_clf_crop_save(file_label: str, annot_json_file: str, type: str) -> None:
     if type not in {"train", "val", "test"}:
         raise TypeError("[ERROR]: Invalid Type, should be one of {'train', 'val', 'test'}")
 
-    fp = open(file=annotation, mode="r")
+    fp = open(file=annot_json_file, mode="r")
     data = json.load(fp=fp)
     objects = data["objects"]
 
-    for i, object in enumerate(objects):
+    for object in objects:
+        key = object["key"]
+        label = object["label"]
         properties = object["properties"]
         if True:    # optional: add filter conditions in `properties` dict here
-            save_label(label=object["label"], label_name=label + '_' + str(i), type=type)
             update_num_signs(valid=True, type=type)
-            image_file = MTSD_FULLY_ANNOTATED_IMAGES_DIR + label + ".jpg"
+            image_file = MTSD_FULLY_ANNOTATED_IMAGES_DIR + file_label + ".jpg"
             image = Image.open(fp=image_file)
             if data["ispano"] == True and "cross_boundary" in object["bbox"]:
                 image_merged = panorama(image=image, object=object)
-                save_cropped_image(image_cropped=image_merged, image_name=label + '_' + str(i), type=type)
+                save_cropped_image(image_cropped=image_merged, image_name=label + '/' + key, type=type)
                 continue
             box = (object["bbox"]["xmin"], object["bbox"]["ymin"], object["bbox"]["xmax"], object["bbox"]["ymax"])
             image_cropped = image.crop(box=box)
-            save_cropped_image(image_cropped=image_cropped, image_name=label + '_' + str(i), type=type)
+            save_cropped_image(image_cropped=image_cropped, image_name=label + '/' + key, type=type)
             image.close()
         else:
             update_num_signs(valid=False, type=type)
     return
 
 def main():
-    # create labels and crop images for training dataset
-    print("[INFO]: Start labeling and cropping training dataset...")
+    # check if all necessary directories existed
+    check_dirs()
+
+    # classify and crop images for training dataset
+    print("[INFO]: Start classifying and cropping training dataset...")
     train_label = load_label(data_label_file=MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_LABEL)
-    for label in tqdm(train_label):
-        annotation_file = ANNOTATIONS_FOLDER + label + ".json"
-        filter_label_crop_save(label=label, annotation=annotation_file, type="train")
-    print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TRAIN_DIR)
-    print("[INFO]: Cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR)
+    for file_label in tqdm(train_label):
+        print(file_label)
+        annot_json_file = ANNOTATIONS_FOLDER + file_label + ".json"
+        filter_clf_crop_save(file_label=file_label, annot_json_file=annot_json_file, type="train")
+    print("[INFO]: Classified & cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR)
 
-    # create labels and crop images for val dataset
-    print("[INFO]: Start labeling and cropping validation dataset...")
+    # classify and crop images for val dataset
+    print("[INFO]: Start classifying and cropping validation dataset...")
     val_label = load_label(data_label_file=MTSD_FULLY_ANNOTATED_IMAGES_VAL_LABEL)
-    for label in tqdm(val_label):
-        annotation_file = ANNOTATIONS_FOLDER + label + ".json"
-        filter_label_crop_save(label=label, annotation=annotation_file, type="val")
-    print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_VAL_DIR)
-    print("[INFO]: Cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR)
+    for file_label in tqdm(val_label):
+        annot_json_file = ANNOTATIONS_FOLDER + file_label + ".json"
+        filter_clf_crop_save(file_label=file_label, annot_json_file=annot_json_file, type="val")
+    print("[INFO]: Classified & cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR)
 
-    # create labels and crop images for test dataset
-    print("[INFO]: Start labeling and cropping testing dataset...")
+    # classify and crop images for test dataset
+    print("[INFO]: Start classifying and cropping testing dataset...")
     test_label = load_label(data_label_file=MTSD_FULLY_ANNOTATED_IMAGES_TEST_LABEL)
-    for label in tqdm(test_label):
-        annotation_file = ANNOTATIONS_FOLDER + label + ".json"
-        filter_label_crop_save(label=label, annotation=annotation_file, type="train")
-    print("[INFO]: Image labels are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_LABEL_TEST_DIR)
-    print("[INFO]: Cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR)
+    for file_label in tqdm(test_label):
+        annot_json_file = ANNOTATIONS_FOLDER + file_label + ".json"
+        filter_clf_crop_save(file_label=file_label, annot_json_file=annot_json_file, type="train")
+    print("[INFO]: Classified & cropped images are saved to \"%s\"" % MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR)
 
     print("[INFO]: Training Dataset   # %d" % VALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM)
     print("[INFO]: Validation Dataset # %d" % VALID_MTSD_FULLY_ANNOTATED_SIGNS_VAL_NUM)
