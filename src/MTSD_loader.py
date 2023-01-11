@@ -1,6 +1,7 @@
 import config
 from typing import List, Tuple, Union
 import tensorflow as tf
+from tensoflow.keras.utils import image_dataset_from_directory
 
 class MTSDLoader():
     def __init__(self,
@@ -98,57 +99,20 @@ class MTSDLoader():
                                      aspect ratio may not be preserved.
         :param kwargs: Legacy keyword arguments.
         """
-        self.dataset = self._load_train_dataset(directory=directory,
-                                                labels=labels,
-                                                label_mode=label_mode,
-                                                class_names=class_names,
-                                                color_mode=color_mode,
-                                                batch_size=batch_size,
-                                                image_size=image_size,
-                                                shuffle=shuffle,
-                                                seed=seed,
-                                                validation_split=validation_split,
-                                                subset=subset,
-                                                interpolation=interpolation,
-                                                follow_links=follow_links,
-                                                crop_to_aspect_ratio=crop_to_aspect_ratio)
-    def _load_label(self, label_dir: str) -> List:
-        filename_list = tf.io.gfile.listdir(path=label_dir)
-        return filename_list
-
-    def _load_train_dataset(self,
-                            directory: str,
-                            labels="inferred",
-                            label_mode="int",
-                            class_names=None,
-                            color_mode="rgb",
-                            batch_size=32,
-                            image_size=(256, 256),
-                            shuffle=True,
-                            seed=None,
-                            validation_split=None,
-                            subset=None,
-                            interpolation="bilinear",
-                            follow_links=False,
-                            crop_to_aspect_ratio=False,
-                            **kwargs,
-                            ) -> tf.data.Dataset:
-        return tf.keras.utils.image_dataset_from_directory(
-            directory=directory,
-            labels=labels,
-            label_mode=label_mode,
-            class_names=class_names,
-            color_mode=color_mode,
-            batch_size=batch_size,
-            image_size=image_size,
-            shuffle=shuffle,
-            seed=seed,
-            validation_split=validation_split,
-            subset=subset,
-            interpolation=interpolation,
-            follow_links=follow_links,
-            crop_to_aspect_ratio=crop_to_aspect_ratio
-        )
+        self.dataset = image_dataset_from_directory(directory=directory,
+                                                    labels=labels,
+                                                    label_mode=label_mode,
+                                                    class_names=class_names,
+                                                    color_mode=color_mode,
+                                                    batch_size=batch_size,
+                                                    image_size=image_size,
+                                                    shuffle=shuffle,
+                                                    seed=seed,
+                                                    validation_split=validation_split,
+                                                    subset=subset,
+                                                    interpolation=interpolation,
+                                                    follow_links=follow_links,
+                                                    crop_to_aspect_ratio=crop_to_aspect_ratio)
 
 def main():
     return
