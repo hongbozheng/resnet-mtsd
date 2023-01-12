@@ -1,7 +1,5 @@
 import config
-from typing import List, Tuple, Union
-import tensorflow as tf
-from tensoflow.keras.utils import image_dataset_from_directory
+from tensorflow.keras.utils import image_dataset_from_directory
 
 class MTSDLoader():
     def __init__(self,
