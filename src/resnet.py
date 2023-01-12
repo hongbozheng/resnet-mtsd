@@ -8,11 +8,16 @@ from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.resnet import ResNet50, ResNet101
 
-BN_AXIS=3 if backend.image_data_format()=="channels_last" else 1
 BATCH_SIZE=1
 INPUT_CHANNELS=3
 INPUT_HEIGHT=224
 INPUT_WIDTH=224
+if backend.image_data_format() == "channels_first":
+    BN_AXIS = 1
+    INPUT_SHAPE = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
+else:
+    BN_AXIS = 3
+    INPUT_SHAPE = (BATCH_SIZE, INPUT_HEIGHT, INPUT_WIDTH, INPUT_CHANNELS)
 
 class ResNet(Layer):
     def __init__(self, num_res_blocks: List[int], include_top: bool, pooling: str=None, num_classes: int=1000) -> None:
@@ -216,16 +221,14 @@ class ResNet(Layer):
         return resnet
 
 def main():
-    input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
-
     '''ResNet-50 Backbone'''
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, pooling="avg", num_classes=1000)
-    resnet50_backbone = resnet50.model(input_shape=input_shape[1:], input_tensor=None, name="ResNet-50 Backbone",
+    resnet50_backbone = resnet50.model(input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50 Backbone",
                                        weights="imagenet")
 
     '''tensorflow.keras.applications.resnet.ResNet50 Backbone'''
     resnet50_backbone_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None,
-                                      input_shape=input_shape[1:], pooling="avg", classes=1000)
+                                      input_shape=INPUT_SHAPE[1:], pooling="avg", classes=1000)
 
     print(resnet50_backbone.summary())
     print("[INFO]: Total # of layers in ResNet-50 Backbone %d" % len(resnet50_backbone.layers))
