@@ -75,15 +75,13 @@ class Classifier(keras.Model):
         return classifier
 
 def main():
-    input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
-
     '''ResNet-50 Backbone'''
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, pooling="avg", num_classes=1000)
-    resnet50_backbone = resnet50.model(input_shape=input_shape[1:], input_tensor=None, name="ResNet-50-Backbone",
+    resnet50_backbone = resnet50.model(input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50-Backbone",
                                        weights="imagenet")
     '''ResNet-50 Backbone + Classifier'''
     classifier = Classifier(resnet_backbone=resnet50_backbone, num_classes=MTSD_CLASSES).model(
-        input_shape=input_shape[1:], input_tensor=None, name="ResNet-50 Classifier")
+        input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50 Classifier")
 
     print(classifier.summary())
     print("[INFO]: Total # of layers in ResNet-50 Classifier %d" % len(classifier.layers))
