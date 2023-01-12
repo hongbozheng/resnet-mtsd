@@ -9,9 +9,9 @@ MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_images_train
 MTSD_FULLY_ANNOTATED_IMAGES_VAL_DIR="../MTSD/mtsd_fully_annotated_images_val/"
 MTSD_FULLY_ANNOTATED_IMAGES_TEST_DIR="../MTSD/mtsd_fully_annotated_images_test/"
 
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_cropped_images_train/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_VAL_DIR="../MTSD/mtsd_fully_annotated_cropped_images_val/"
-MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TEST_DIR="../MTSD/mtsd_fully_annotated_cropped_images_test/"
+MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_classified_cropped_images_train/"
+MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_VAL_DIR="../MTSD/mtsd_fully_annotated_classified_cropped_images_val/"
+MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TEST_DIR="../MTSD/mtsd_fully_annotated_classified_cropped_images_test/"
 
 MTSD_CLASSES=401
 BATCH_SIZE=1
@@ -32,7 +32,7 @@ def main():
     print(classifier.summary())
     print("[INFO]: Total # of layers in ResNet-50 Classifier %d" % len(classifier.layers))
 
-    mtsd_loader = MTSDLoader(directory=MTSD_FULLY_ANNOTATED_CROPPED_IMAGES_TRAIN_DIR,
+    mtsd_loader = MTSDLoader(directory=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR,
                              labels="inferred",
                              label_mode="int",
                              class_names=False,
