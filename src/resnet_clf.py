@@ -11,7 +11,10 @@ BATCH_SIZE=1
 INPUT_CHANNELS=3
 INPUT_HEIGHT=224
 INPUT_WIDTH=224
-INPUT_SHAPE = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
+if backend.image_data_format() == "channels_first":
+    INPUT_SHAPE = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
+else:
+    INPUT_SHAPE = (BATCH_SIZE, INPUT_HEIGHT, INPUT_WIDTH, INPUT_CHANNELS)
 
 class Classifier(keras.Model):
     def __init__(self, resnet_backbone: keras.Model, num_classes: int):
