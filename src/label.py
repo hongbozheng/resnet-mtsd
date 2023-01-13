@@ -49,10 +49,13 @@ BUTTON_COLOR=(255,165,0)
 BUTTON_COLOR_HOVER=(245, 203, 167)
 BUTTON_COLOR_PRESSED=(211, 84, 0)
 
+# MTSD Dataset
 MTSD_CLASSES=401
 MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_classified_cropped_images_train/"
 CLASS_DIRS=os.listdir(path=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR)
 INDEX=0
+
+# MTSD Dataset Image Position
 IMAGE_WIDTH=100
 IMAGE_HEIGHT=100
 IMAGE_POS_X=250
@@ -128,19 +131,19 @@ class LabelTool:
         self.fps_clk = pygame.time.Clock()
         pygame.display.flip()
 
-    def imshow_next(self) -> None:
-        global INDEX
-        if INDEX < MTSD_CLASSES-1:
-            INDEX += 1
-        class_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + CLASS_DIRS[INDEX] + '/'
-        image = pygame.image.load(class_dir + os.listdir(path=class_dir)[0])
-        image = pygame.transform.scale(surface=image, size=(IMAGE_WIDTH, IMAGE_HEIGHT))
-        self.window.blit(image, (IMAGE_POS_X, IMAGE_POS_Y))
-
     def imshow_prev(self) -> None:
         global INDEX
         if INDEX > 0:
             INDEX -= 1
+        class_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + CLASS_DIRS[INDEX] + '/'
+        image = pygame.image.load(class_dir + os.listdir(path=class_dir)[0])
+        image = pygame.transform.scale(surface=image, size=(IMAGE_WIDTH, IMAGE_HEIGHT))
+        self.window.blit(image, (IMAGE_POS_X, IMAGE_POS_Y))\
+
+    def imshow_next(self) -> None:
+        global INDEX
+        if INDEX < MTSD_CLASSES-1:
+            INDEX += 1
         class_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + CLASS_DIRS[INDEX] + '/'
         image = pygame.image.load(class_dir + os.listdir(path=class_dir)[0])
         image = pygame.transform.scale(surface=image, size=(IMAGE_WIDTH, IMAGE_HEIGHT))
