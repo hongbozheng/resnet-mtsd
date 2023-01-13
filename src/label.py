@@ -1,43 +1,52 @@
+# #!/usr/bin/env python3
+
 import os
-import tkinter as tk
-from PIL import ImageTk
+import sys
+from typing import Tuple
+import pygame
+from pygame.locals import *
+
+WINDOW_WIDTH=500
+WINDOW_HEIGHT=500
+"""
+pygame.FULLSCREEN    create a fullscreen display
+pygame.DOUBLEBUF     only applicable with OPENGL
+pygame.HWSURFACE     (obsolete in pygame 2) hardware accelerated, only in FULLSCREEN
+pygame.OPENGL        create an OpenGL-renderable display
+pygame.RESIZABLE     display window should be sizeable
+pygame.NOFRAME       display window will have no border or controls
+pygame.SCALED        resolution depends on desktop size and scale graphics
+pygame.SHOWN         window is opened in visible mode (default)
+pygame.HIDDEN        window is opened in hidden mode
+"""
+FLAGS=RESIZABLE
+BACKGROUND_COLOR=(192,192,192)
 
 MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_classified_cropped_images_train/"
 
-def imshow(image_dir, MTSD_classes, idx):
-    cls_img_dir = image_dir + MTSD_classes[idx] + '/'
-    image_name = os.listdir(path=cls_img_dir)
-    image_file = cls_img_dir + image_name[0]
+class LabelTool:
+    def __init__(self, size: Tuple[int,int], flags: int, background_color: Tuple[int,int,int]) -> None:
+        self.size = size
+        self.flags = flags
+        self.background_color = background_color
+        pygame.init()
+        self.window = pygame.display.set_mode(size=self.size, flags=self.flags)
+        self.window.fill(color=BACKGROUND_COLOR)
 
-    image = ImageTk.PhotoImage(file=image_file)
-    image_box.config(image=image)
-    image_box.image = image
+    def run(self) -> None:
+        while True:
+            for event in pygame.event.get():
+                if event.type == QUIT:
+                    pygame.quit()
+                    sys.exit(0)
+                elif event.type == VIDEORESIZE:
+                    self.window.fill(color=self.background_color)
+                    pygame.display.flip()
 
 def main():
-    idx = 0
-    MTSD_classes = os.listdir(path=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR)
-
-    root = tk.Tk()
-
-    frame = tk.Frame(root)
-    frame.pack()
-
-    button = tk.Button(frame, text="QUIT", fg="RED",
-                       command=lambda: imshow(image_dir=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR,
-                                              MTSD_classes=MTSD_classes, idx=idx))
-    button.pack(side=tk.LEFT)
-
-
-
-    image_box = tk.Label(root)
-    image_box.pack()
-
-    # for cls in MTSD_classes:
-    #     cls_img_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + cls + '/'
-    #     img_name = os.listdir(path=cls_img_dir)
-    #     print(img_name)
-    root.mainloop()
-    return
+   label_tool = LabelTool(size=(WINDOW_WIDTH, WINDOW_HEIGHT), flags=FLAGS, background_color=BACKGROUND_COLOR)
+   label_tool.run()
+   return
 
 if __name__ == "__main__":
     main()
