@@ -38,8 +38,14 @@ BTN_FONT_SIZE=15
 BTN_FONT_BOLD=False
 BTN_FONT_ITALIC=False
 
+MTSD_CLASSES=401
 MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_classified_cropped_images_train/"
+CLASS_DIRS=os.listdir(path=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR)
 INDEX=0
+IMAGE_WIDTH=100
+IMAGE_HEIGHT=100
+IMAGE_POS_X=250
+IMAGE_POS_Y=250
 
 class Button:
     def __init__(self,
@@ -87,9 +93,6 @@ class Button:
                                              self.btn_rect.height/2 - self.btn_txt.get_rect().height/2])
         window.blit(self.btn_surface, self.btn_rect)
 
-def test():
-    print("button pressed")
-
 def test1():
     print("multi-pressed")
 
@@ -98,17 +101,42 @@ class LabelTool:
                  size: Tuple[int,int],
                  flags: int,
                  background_color: Tuple[int,int,int],
-                 buttons: List[Button],
                  fps: int) -> None:
         self.size = size
         self.flags = flags
         self.background_color = background_color
-        self.buttons = buttons
         self.window = pygame.display.set_mode(size=self.size, flags=self.flags)
+        button_next = Button(x=30, y=30, width=100, height=100, flags=0,
+                             btn_txt="Next", btn_txt_color=BTN_TXT_COLOR,
+                             font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
+                             onclick_fn=self.imshow_next, one_press=False, fps=FPS)
+        button_prev = Button(x=30, y=140, width=100, height=100, flags=0,
+                             btn_txt="Next1", btn_txt_color=BTN_TXT_COLOR,
+                             font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
+                             onclick_fn=self.imshow_prev, one_press=False, fps=FPS)
+        self.buttons = [button_next, button_prev]
         self.window.fill(color=BACKGROUND_COLOR)
         self.fps = fps
         self.fps_clk = pygame.time.Clock()
         pygame.display.flip()
+
+    def imshow_next(self) -> None:
+        global INDEX
+        if INDEX < MTSD_CLASSES-1:
+            INDEX += 1
+        class_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + CLASS_DIRS[INDEX] + '/'
+        image = pygame.image.load(class_dir + os.listdir(path=class_dir)[0])
+        image = pygame.transform.scale(surface=image, size=(IMAGE_WIDTH, IMAGE_HEIGHT))
+        self.window.blit(image, (IMAGE_POS_X, IMAGE_POS_Y))
+
+    def imshow_prev(self) -> None:
+        global INDEX
+        if INDEX > 0:
+            INDEX -= 1
+        class_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + CLASS_DIRS[INDEX] + '/'
+        image = pygame.image.load(class_dir + os.listdir(path=class_dir)[0])
+        image = pygame.transform.scale(surface=image, size=(IMAGE_WIDTH, IMAGE_HEIGHT))
+        self.window.blit(image, (IMAGE_POS_X, IMAGE_POS_Y))
 
     def run(self) -> None:
         while True:
@@ -125,17 +153,7 @@ class LabelTool:
             self.fps_clk.tick(self.fps)
 
 def main():
-    button_next = Button(x=30, y=30, width=100, height=100, flags=0,
-                         btn_txt="Next", btn_txt_color=BTN_TXT_COLOR,
-                         font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
-                         onclick_fn=test, one_press=False, fps=FPS)
-    button_next1 = Button(x=30, y=140, width=100, height=100, flags=0,
-                          btn_txt="Next1", btn_txt_color=BTN_TXT_COLOR,
-                          font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
-                          onclick_fn=test1, one_press=True, fps=FPS)
-    buttons = [button_next, button_next1]
-    label_tool = LabelTool(size=(WINDOW_WIDTH, WINDOW_HEIGHT), flags=FLAGS, background_color=BACKGROUND_COLOR,
-                           buttons=buttons, fps=FPS)
+    label_tool = LabelTool(size=(WINDOW_WIDTH, WINDOW_HEIGHT), flags=FLAGS, background_color=BACKGROUND_COLOR, fps=FPS)
     label_tool.run()
     return
 
