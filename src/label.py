@@ -10,8 +10,8 @@ pygame.init()
 
 # Window Configurations
 FPS=144
-WINDOW_WIDTH=500
-WINDOW_HEIGHT=500
+WINDOW_WIDTH=800
+WINDOW_HEIGHT=800
 """
 pygame.FULLSCREEN    create a fullscreen display
 pygame.DOUBLEBUF     only applicable with OPENGL
@@ -26,17 +26,28 @@ pygame.HIDDEN        window is opened in hidden mode
 FLAGS=RESIZABLE
 BACKGROUND_COLOR=(192,192,192)
 
-# Button Color Configurations
-BUTTON_COLOR=(255,165,0)
-BUTTON_COLOR_HOVER=(245, 203, 167)
-BUTTON_COLOR_PRESSED=(211, 84, 0)
+# Button Position
+BTN_NEXT_X=700
+BTN_NEXT_Y=700
+BTN_NEXT_WIDTH=50
+BTN_NEXT_HEIGHT=30
 
-# Button Font Configurations
+BTN_PREV_X=50
+BTN_PREV_Y=700
+BTN_PREV_WIDTH=50
+BTN_PREV_HEIGHT=30
+
+# Button Font
 BTN_TXT_COLOR=(20,20,20)
 BTN_FONT="Consolas"
 BTN_FONT_SIZE=15
 BTN_FONT_BOLD=False
 BTN_FONT_ITALIC=False
+
+# Button Color
+BUTTON_COLOR=(255,165,0)
+BUTTON_COLOR_HOVER=(245, 203, 167)
+BUTTON_COLOR_PRESSED=(211, 84, 0)
 
 MTSD_CLASSES=401
 MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_classified_cropped_images_train/"
@@ -93,9 +104,6 @@ class Button:
                                              self.btn_rect.height/2 - self.btn_txt.get_rect().height/2])
         window.blit(self.btn_surface, self.btn_rect)
 
-def test1():
-    print("multi-pressed")
-
 class LabelTool:
     def __init__(self,
                  size: Tuple[int,int],
@@ -106,12 +114,12 @@ class LabelTool:
         self.flags = flags
         self.background_color = background_color
         self.window = pygame.display.set_mode(size=self.size, flags=self.flags)
-        button_next = Button(x=30, y=30, width=100, height=100, flags=0,
+        button_next = Button(x=BTN_NEXT_X, y=BTN_NEXT_Y, width=BTN_NEXT_WIDTH, height=BTN_NEXT_HEIGHT, flags=0,
                              btn_txt="Next", btn_txt_color=BTN_TXT_COLOR,
                              font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
                              onclick_fn=self.imshow_next, one_press=False, fps=FPS)
-        button_prev = Button(x=30, y=140, width=100, height=100, flags=0,
-                             btn_txt="Next1", btn_txt_color=BTN_TXT_COLOR,
+        button_prev = Button(x=BTN_PREV_X, y=BTN_PREV_Y, width=BTN_PREV_WIDTH, height=BTN_PREV_HEIGHT, flags=0,
+                             btn_txt="Prev", btn_txt_color=BTN_TXT_COLOR,
                              font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
                              onclick_fn=self.imshow_prev, one_press=False, fps=FPS)
         self.buttons = [button_next, button_prev]
