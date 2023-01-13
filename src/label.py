@@ -1,4 +1,4 @@
-# #!/usr/bin/env python3
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -32,6 +32,7 @@ class LabelTool:
         pygame.init()
         self.window = pygame.display.set_mode(size=self.size, flags=self.flags)
         self.window.fill(color=BACKGROUND_COLOR)
+        pygame.display.flip()
 
     def run(self) -> None:
         while True:
