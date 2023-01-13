@@ -2,10 +2,12 @@
 
 import os
 import sys
-from typing import Tuple
+from typing import Tuple, List
 import pygame
 from pygame.locals import *
 
+pygame.init()
+FPS=144
 WINDOW_WIDTH=500
 WINDOW_HEIGHT=500
 """
@@ -21,15 +23,74 @@ pygame.HIDDEN        window is opened in hidden mode
 """
 FLAGS=RESIZABLE
 BACKGROUND_COLOR=(192,192,192)
+BUTTON_COLOR=(255,165,0)
+BUTTON_COLOR_HOVER=(245, 203, 167)
+BUTTON_COLOR_PRESSED=(211, 84, 0)
+FONT=pygame.font.SysFont(name="Arial", size=15, bold=False, italic=False)
 
 MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_classified_cropped_images_train/"
 
+class Button:
+    def __init__(self,
+                 x,
+                 y,
+                 width,
+                 height,
+                 flags,
+                 font,
+                 btn_txt,
+                 onclick_fn,
+                 one_press,
+                 fps):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.flags = flags
+        self.onclick_fn = onclick_fn
+        self.one_press = one_press
+        self.pressed = False
+        self.fps = fps
+        self.fps_clk = pygame.time.Clock()
+        self.btn_surface = pygame.Surface(size=(self.width, self.height), flags=self.flags)
+        self.btn_rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.btn_txt = font.render(btn_txt, True, (20,20,20))
+
+    def process(self, window):
+        mouse_pos = pygame.mouse.get_pos()
+        self.btn_surface.fill(color=BUTTON_COLOR)
+        if self.btn_rect.collidepoint(mouse_pos):
+            self.btn_surface.fill(color=BUTTON_COLOR_HOVER)
+            if pygame.mouse.get_pressed(num_buttons=3)[0]:
+                self.btn_surface.fill(color=BUTTON_COLOR_PRESSED)
+                if self.one_press:
+                    self.onclick_fn()
+                elif not self.pressed:
+                    self.onclick_fn()
+                    self.pressed = True
+            else:
+                self.pressed = False
+        self.btn_surface.blit(self.btn_txt, [self.btn_rect.width/2 - self.btn_surface.get_rect().width/2,
+                                             self.btn_rect.height/2 - self.btn_surface.get_rect().height/2])
+        window.blit(self.btn_surface, self.btn_rect)
+        self.fps_clk.tick(self.fps)
+
+def test():
+    print("button pressed")
+
+def test1():
+    print("multi-pressed")
+
 class LabelTool:
-    def __init__(self, size: Tuple[int,int], flags: int, background_color: Tuple[int,int,int]) -> None:
+    def __init__(self,
+                 size: Tuple[int,int],
+                 flags: int,
+                 background_color: Tuple[int,int,int],
+                 buttons: List[Button]) -> None:
         self.size = size
         self.flags = flags
         self.background_color = background_color
-        pygame.init()
+        self.buttons = buttons
         self.window = pygame.display.set_mode(size=self.size, flags=self.flags)
         self.window.fill(color=BACKGROUND_COLOR)
         pygame.display.flip()
@@ -43,11 +104,20 @@ class LabelTool:
                 elif event.type == VIDEORESIZE:
                     self.window.fill(color=self.background_color)
                     pygame.display.flip()
+            for button in self.buttons:
+                button.process(window=self.window)
+            pygame.display.flip()
 
 def main():
-   label_tool = LabelTool(size=(WINDOW_WIDTH, WINDOW_HEIGHT), flags=FLAGS, background_color=BACKGROUND_COLOR)
-   label_tool.run()
-   return
+    button_next = Button(x=30, y=30, width=100, height=100,  btn_txt="Next", flags=0, font=FONT, onclick_fn=test,
+                         one_press=False, fps=FPS)
+    button_next1 = Button(x=30, y=140, width=100, height=100,  btn_txt="Next1", flags=0, font=FONT, onclick_fn=test1,
+                         one_press=True, fps=FPS)
+    buttons = [button_next, button_next1]
+    label_tool = LabelTool(size=(WINDOW_WIDTH, WINDOW_HEIGHT), flags=FLAGS, background_color=BACKGROUND_COLOR,
+                           buttons=buttons)
+    label_tool.run()
+    return
 
 if __name__ == "__main__":
     main()
