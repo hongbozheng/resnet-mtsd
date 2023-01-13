@@ -26,27 +26,36 @@ BACKGROUND_COLOR=(192,192,192)
 BUTTON_COLOR=(255,165,0)
 BUTTON_COLOR_HOVER=(245, 203, 167)
 BUTTON_COLOR_PRESSED=(211, 84, 0)
-FONT=pygame.font.SysFont(name="Arial", size=15, bold=False, italic=False)
+
+# Button Font Configurations
+BTN_FONT="Consolas"
+BTN_FONT_SIZE=15
+BTN_FONT_BOLD=False
+BTN_FONT_ITALIC=False
 
 MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_classified_cropped_images_train/"
 
 class Button:
     def __init__(self,
-                 x,
-                 y,
-                 width,
-                 height,
-                 flags,
-                 font,
-                 btn_txt,
+                 x: float,
+                 y: float,
+                 width: float,
+                 height: float,
+                 flags: int,
+                 btn_txt : str,
+                 font: str,
+                 font_size: int,
+                 bold: bool,
+                 italic: bool,
                  onclick_fn,
-                 one_press,
+                 one_press: bool,
                  fps):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
         self.flags = flags
+        self.font = pygame.font.SysFont(name=font, size=font_size, bold=bold, italic=italic)
         self.onclick_fn = onclick_fn
         self.one_press = one_press
         self.pressed = False
@@ -54,7 +63,7 @@ class Button:
         self.fps_clk = pygame.time.Clock()
         self.btn_surface = pygame.Surface(size=(self.width, self.height), flags=self.flags)
         self.btn_rect = pygame.Rect(self.x, self.y, self.width, self.height)
-        self.btn_txt = font.render(btn_txt, True, (20,20,20))
+        self.btn_txt = self.font.render(btn_txt, True, (20,20,20))
 
     def process(self, window):
         mouse_pos = pygame.mouse.get_pos()
@@ -109,10 +118,14 @@ class LabelTool:
             pygame.display.flip()
 
 def main():
-    button_next = Button(x=30, y=30, width=100, height=100,  btn_txt="Next", flags=0, font=FONT, onclick_fn=test,
-                         one_press=False, fps=FPS)
-    button_next1 = Button(x=30, y=140, width=100, height=100,  btn_txt="Next1", flags=0, font=FONT, onclick_fn=test1,
-                         one_press=True, fps=FPS)
+    button_next = Button(x=30, y=30, width=100, height=100, flags=0,
+                         btn_txt="Next",
+                         font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
+                         onclick_fn=test, one_press=False, fps=FPS)
+    button_next1 = Button(x=30, y=140, width=100, height=100, flags=0,
+                          btn_txt="Next1",
+                          font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
+                          onclick_fn=test1, one_press=True, fps=FPS)
     buttons = [button_next, button_next1]
     label_tool = LabelTool(size=(WINDOW_WIDTH, WINDOW_HEIGHT), flags=FLAGS, background_color=BACKGROUND_COLOR,
                            buttons=buttons)
