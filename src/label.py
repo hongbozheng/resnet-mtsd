@@ -70,8 +70,8 @@ class Button:
                     self.pressed = True
             else:
                 self.pressed = False
-        self.btn_surface.blit(self.btn_txt, [self.btn_rect.width/2 - self.btn_surface.get_rect().width/2,
-                                             self.btn_rect.height/2 - self.btn_surface.get_rect().height/2])
+        self.btn_surface.blit(self.btn_txt, [self.btn_rect.width/2 - self.btn_txt.get_rect().width/2,
+                                             self.btn_rect.height/2 - self.btn_txt.get_rect().height/2])
         window.blit(self.btn_surface, self.btn_rect)
         self.fps_clk.tick(self.fps)
 
