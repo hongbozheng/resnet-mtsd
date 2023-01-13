@@ -31,7 +31,6 @@ BTN_NEXT_X=700
 BTN_NEXT_Y=700
 BTN_NEXT_WIDTH=50
 BTN_NEXT_HEIGHT=30
-
 BTN_PREV_X=50
 BTN_PREV_Y=700
 BTN_PREV_WIDTH=50
@@ -49,6 +48,18 @@ BUTTON_COLOR=(255,165,0)
 BUTTON_COLOR_HOVER=(245, 203, 167)
 BUTTON_COLOR_PRESSED=(211, 84, 0)
 
+# Text Position
+
+# Text Font
+TXT_COLOR=(20,20,20)
+TXT_FONT="Consolas"
+TXT_FONT_SIZE=15
+TXT_FONT_BOLD=False
+TXT_FONT_ITALIC=False
+
+# Text Color
+TXT_COLOR=()
+
 # MTSD Dataset
 MTSD_CLASSES=401
 MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_classified_cropped_images_train/"
@@ -60,6 +71,15 @@ IMAGE_WIDTH=100
 IMAGE_HEIGHT=100
 IMAGE_POS_X=250
 IMAGE_POS_Y=250
+
+class Text:
+    def __init__(self,
+                 x: int,
+                 y: int,
+                 ) -> None:
+        self.x = x
+        self.y = y
+
 
 class Button:
     def __init__(self,
@@ -76,15 +96,11 @@ class Button:
                  italic: bool,
                  onclick_fn,
                  one_press: bool,
-                 fps):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        self.btn_surface = pygame.Surface(size=(self.width, self.height), flags=flags)
+                 ) -> None:
+        self.btn_surface = pygame.Surface(size=(width, height), flags=flags)
         self.font = pygame.font.SysFont(name=font, size=font_size, bold=bold, italic=italic)
         self.btn_txt = self.font.render(btn_txt, True, btn_txt_color)
-        self.btn_rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.btn_rect = pygame.Rect(x, y, width, height)
         self.onclick_fn = onclick_fn
         self.one_press = one_press
         self.pressed = False
@@ -112,7 +128,8 @@ class LabelTool:
                  size: Tuple[int,int],
                  flags: int,
                  background_color: Tuple[int,int,int],
-                 fps: int) -> None:
+                 fps: int
+                 ) -> None:
         self.size = size
         self.flags = flags
         self.background_color = background_color
@@ -120,34 +137,36 @@ class LabelTool:
         button_next = Button(x=BTN_NEXT_X, y=BTN_NEXT_Y, width=BTN_NEXT_WIDTH, height=BTN_NEXT_HEIGHT, flags=0,
                              btn_txt="Next", btn_txt_color=BTN_TXT_COLOR,
                              font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
-                             onclick_fn=self.imshow_next, one_press=False, fps=FPS)
+                             onclick_fn=self.imshow_next, one_press=False)
         button_prev = Button(x=BTN_PREV_X, y=BTN_PREV_Y, width=BTN_PREV_WIDTH, height=BTN_PREV_HEIGHT, flags=0,
                              btn_txt="Prev", btn_txt_color=BTN_TXT_COLOR,
                              font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
-                             onclick_fn=self.imshow_prev, one_press=False, fps=FPS)
+                             onclick_fn=self.imshow_prev, one_press=False)
         self.buttons = [button_next, button_prev]
         self.window.fill(color=BACKGROUND_COLOR)
         self.fps = fps
         self.fps_clk = pygame.time.Clock()
         pygame.display.flip()
 
+    def imshow9x9(self) -> None:
+        class_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + CLASS_DIRS[INDEX] + '/'
+        if len(class_dir) >= 9:
+            pass
+        image = pygame.image.load(class_dir + os.listdir(path=class_dir)[0])
+        image = pygame.transform.scale(surface=image, size=(IMAGE_WIDTH, IMAGE_HEIGHT))
+        self.window.blit(image, (IMAGE_POS_X, IMAGE_POS_Y))
+
     def imshow_prev(self) -> None:
         global INDEX
         if INDEX > 0:
             INDEX -= 1
-        class_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + CLASS_DIRS[INDEX] + '/'
-        image = pygame.image.load(class_dir + os.listdir(path=class_dir)[0])
-        image = pygame.transform.scale(surface=image, size=(IMAGE_WIDTH, IMAGE_HEIGHT))
-        self.window.blit(image, (IMAGE_POS_X, IMAGE_POS_Y))\
+        self.imshow9x9()
 
     def imshow_next(self) -> None:
         global INDEX
         if INDEX < MTSD_CLASSES-1:
             INDEX += 1
-        class_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + CLASS_DIRS[INDEX] + '/'
-        image = pygame.image.load(class_dir + os.listdir(path=class_dir)[0])
-        image = pygame.transform.scale(surface=image, size=(IMAGE_WIDTH, IMAGE_HEIGHT))
-        self.window.blit(image, (IMAGE_POS_X, IMAGE_POS_Y))
+        self.imshow9x9()
 
     def run(self) -> None:
         while True:
