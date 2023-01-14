@@ -98,6 +98,8 @@ IMAGE_WIDTH=100
 IMAGE_HEIGHT=100
 IMAGE_POS_X=35
 IMAGE_POS_Y=135
+IMAGE_ROW=3
+IMAGE_COLUMN=3
 IMAGE_GRANULARITY=30
 
 class Text:
@@ -208,8 +210,7 @@ class LabelTool:
         self.txt_class_index.txtshow(window=self.window)
         self.txt_class.txtshow(window=self.window)
         self.update_txt()
-        self.imshow3x3()
-        self.fps_clk.tick(self.fps)
+        self.imshow(rows=IMAGE_ROW, columns=IMAGE_COLUMN)
 
     def update_txt(self) -> None:
         self.window.fill(color=BACKGROUND_COLOR)
@@ -224,11 +225,11 @@ class LabelTool:
         self.txt_class_name.txtshow(window=self.window)
         self.txt_cls_idx.txtshow(window=self.window)
 
-    def imshow3x3(self) -> None:
+    def imshow(self, rows: int, columns: int) -> None:
         class_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + CLASS_DIRS[CLASS_INDEX] + '/'
         image_keys = os.listdir(path=class_dir)
-        if len(image_keys) > 9:
-            indices = random.sample(population=range(0, len(image_keys)), k=9)
+        if len(image_keys) > rows*columns:
+            indices = random.sample(population=range(0, len(image_keys)), k=rows*columns)
         else:
             indices = list(range(0, len(image_keys)))
 
@@ -239,8 +240,8 @@ class LabelTool:
             images.append(image)
 
         for i, image in enumerate(images):
-            self.window.blit(image, (IMAGE_POS_X+i%3*(IMAGE_WIDTH+IMAGE_GRANULARITY),
-                                     IMAGE_POS_Y+i//3*(IMAGE_HEIGHT+IMAGE_GRANULARITY)))
+            self.window.blit(image, (IMAGE_POS_X+i%columns*(IMAGE_WIDTH+IMAGE_GRANULARITY),
+                                     IMAGE_POS_Y+i//columns*(IMAGE_HEIGHT+IMAGE_GRANULARITY)))
         return
 
     def imshow_prev(self) -> None:
@@ -248,7 +249,7 @@ class LabelTool:
         if CLASS_INDEX > 0:
             CLASS_INDEX -= 1
             self.update_txt()
-            self.imshow3x3()
+            self.imshow(rows=IMAGE_ROW, columns=IMAGE_COLUMN)
         return
 
     def imshow_next(self) -> None:
@@ -256,7 +257,7 @@ class LabelTool:
         if CLASS_INDEX < MTSD_CLASSES-1:
             CLASS_INDEX += 1
             self.update_txt()
-            self.imshow3x3()
+            self.imshow(rows=IMAGE_ROW, columns=IMAGE_COLUMN)
         return
 
     def run(self) -> None:
