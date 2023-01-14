@@ -7,7 +7,6 @@ from tensorflow.keras.layers import Layer
 from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.resnet import ResNet50
-from tensorflow.keras.applications.resnet_v2 import ResNet50V2
 
 BATCH_SIZE=1
 INPUT_CHANNELS=3
@@ -246,7 +245,7 @@ def main():
     # ResNet Backbone (ResNet-50)
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], use_bias=True, include_top=False, pooling="avg",
                       num_classes=1000)
-    resnet50_backbone = resnet50.model(input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50 Backbone",
+    resnet50_backbone = resnet50.model(input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50-Backbone",
                                        weights=RESNET50_WEIGHTS_NOTOP_FILEPATH)
 
     # tensorflow.keras.applications.resnet.ResNet Backbone (ResNet-50)
