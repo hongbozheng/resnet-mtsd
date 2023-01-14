@@ -73,18 +73,17 @@ IMAGE_POS_Y=250
 
 class Text:
     def __init__(self,
-                 txt_pos: Tuple[int, int],
-                 txt: str,
-                 txt_color: Tuple[int, int, int],
                  font: str,
                  font_size: int,
                  bold: bool,
                  italic: bool,
+                 txt: str,
+                 txt_color: Tuple[int, int, int],
+                 txt_pos: Tuple[int, int],
                  ) -> None:
-        self.txt_pos = txt_pos
         self.font = pygame.font.SysFont(name=font, size=font_size, bold=bold, italic=italic)
         self.txt_surf = self.font.render(txt, True, txt_color)
-        self.txt_rect = self.txt_surf.get_rect(center=(CLASS_TXT_POS_X, CLASS_TXT_POS_Y))
+        self.txt_rect = self.txt_surf.get_rect(center=txt_pos)
 
     def txtshow(self, window):
         window.blit(self.txt_surf, self.txt_rect)
@@ -96,12 +95,12 @@ class Button:
                  width: float,
                  height: float,
                  flags: int,
-                 btn_txt: str,
-                 btn_txt_color: Tuple[int, int, int],
                  font: str,
                  font_size: int,
                  bold: bool,
                  italic: bool,
+                 btn_txt: str,
+                 btn_txt_color: Tuple[int, int, int],
                  onclick_fn,
                  one_press: bool,
                  ) -> None:
@@ -143,18 +142,18 @@ class LabelTool:
         self.background_color = background_color
         self.window = pygame.display.set_mode(size=self.size, flags=self.flags)
         button_next = Button(x=BTN_NEXT_X, y=BTN_NEXT_Y, width=BTN_NEXT_WIDTH, height=BTN_NEXT_HEIGHT, flags=0,
-                             btn_txt="Next", btn_txt_color=BTN_TXT_COLOR,
                              font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
+                             btn_txt="Next", btn_txt_color=BTN_TXT_COLOR,
                              onclick_fn=self.imshow_next, one_press=False)
         button_prev = Button(x=BTN_PREV_X, y=BTN_PREV_Y, width=BTN_PREV_WIDTH, height=BTN_PREV_HEIGHT, flags=0,
-                             btn_txt="Prev", btn_txt_color=BTN_TXT_COLOR,
                              font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
+                             btn_txt="Prev", btn_txt_color=BTN_TXT_COLOR,
                              onclick_fn=self.imshow_prev, one_press=False)
-        self.class_txt = Text(txt_pos=(CLASS_TXT_POS_X, CLASS_TXT_POS_Y),
-                              txt=CLASS_DIRS[INDEX], txt_color=CLASS_TXT_COLOR,
-                              font=CLASS_TXT_FONT, font_size=CLASS_TXT_FONT_SIZE,
-                              bold=CLASS_TXT_FONT_BOLD, italic=CLASS_TXT_FONT_ITALIC,)
         self.buttons = [button_next, button_prev]
+        self.class_txt = Text(font=CLASS_TXT_FONT, font_size=CLASS_TXT_FONT_SIZE,
+                              bold=CLASS_TXT_FONT_BOLD, italic=CLASS_TXT_FONT_ITALIC,
+                              txt=CLASS_DIRS[INDEX], txt_color=CLASS_TXT_COLOR,
+                              txt_pos=(CLASS_TXT_POS_X, CLASS_TXT_POS_Y),)
         self.window.fill(color=BACKGROUND_COLOR)
         self.fps = fps
         self.fps_clk = pygame.time.Clock()
