@@ -160,14 +160,14 @@ class ResNet(Layer):
 
         x = self.padding(inputs=x, training=training)
         x = self.maxpool(inputs=x, training=training)
-        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[0], filters=64, strides=(1,1), use_bias=True,
+        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[0], filters=64, strides=(1,1), use_bias=self.use_bias,
                                 name="conv2")
 
-        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[1], filters=128, strides=(2,2), use_bias=True,
+        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[1], filters=128, strides=(2,2), use_bias=self.use_bias,
                                 name="conv3")
-        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[2], filters=256, strides=(2,2), use_bias=True,
+        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[2], filters=256, strides=(2,2), use_bias=self.use_bias,
                                 name="conv4")
-        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[3], filters=512, strides=(2,2), use_bias=True,
+        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[3], filters=512, strides=(2,2), use_bias=self.use_bias,
                                 name="conv5")
 
         if self.include_top:
