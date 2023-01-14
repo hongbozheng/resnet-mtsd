@@ -86,6 +86,7 @@ class Text:
         self.txt_rect = self.txt_surf.get_rect(center=txt_pos)
 
     def txtshow(self, window):
+        window.fill(BACKGROUND_COLOR, (self.txt_rect.topleft, self.txt_rect.bottomright))
         window.blit(self.txt_surf, self.txt_rect)
 
 class Button:
@@ -159,6 +160,13 @@ class LabelTool:
         self.fps_clk = pygame.time.Clock()
         pygame.display.flip()
 
+    def update_cls_txt(self):
+        self.class_txt = Text(font=CLASS_TXT_FONT, font_size=CLASS_TXT_FONT_SIZE,
+                              bold=CLASS_TXT_FONT_BOLD, italic=CLASS_TXT_FONT_ITALIC,
+                              txt=CLASS_DIRS[INDEX], txt_color=CLASS_TXT_COLOR,
+                              txt_pos=(CLASS_TXT_POS_X, CLASS_TXT_POS_Y),)
+        self.class_txt.txtshow(window=self.window)
+
     def imshow9x9(self) -> None:
         class_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + CLASS_DIRS[INDEX] + '/'
         if len(class_dir) >= 9:
@@ -172,12 +180,14 @@ class LabelTool:
         if INDEX > 0:
             INDEX -= 1
         self.imshow9x9()
+        self.update_cls_txt()
 
     def imshow_next(self) -> None:
         global INDEX
         if INDEX < MTSD_CLASSES-1:
             INDEX += 1
         self.imshow9x9()
+        self.update_cls_txt()
 
     def run(self) -> None:
         while True:
@@ -188,7 +198,7 @@ class LabelTool:
                 elif event.type == VIDEORESIZE:
                     self.window.fill(color=self.background_color)
                     pygame.display.flip()
-            self.class_txt.txtshow(window=self.window)
+            # self.class_txt.txtshow(window=self.window)
             for button in self.buttons:
                 button.process(window=self.window)
                 pygame.display.flip()
