@@ -204,6 +204,13 @@ class LabelTool:
         self.fps_clk = pygame.time.Clock()
         pygame.display.flip()
 
+    def init_window(self):
+        self.txt_class_index.txtshow(window=self.window)
+        self.txt_class.txtshow(window=self.window)
+        self.update_txt()
+        self.imshow3x3()
+        self.fps_clk.tick(self.fps)
+
     def update_txt(self) -> None:
         self.window.fill(color=BACKGROUND_COLOR)
         self.txt_class_name = Text(font=TXT_CLASS_NAME_FONT, font_size=TXT_CLASS_NAME_FONT_SIZE,
@@ -253,6 +260,7 @@ class LabelTool:
         return
 
     def run(self) -> None:
+        self.init_window()
         while True:
             for event in pygame.event.get():
                 if event.type == QUIT:
