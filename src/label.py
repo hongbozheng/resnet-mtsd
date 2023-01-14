@@ -48,17 +48,16 @@ BUTTON_COLOR=(255,165,0)
 BUTTON_COLOR_HOVER=(245, 203, 167)
 BUTTON_COLOR_PRESSED=(211, 84, 0)
 
-# Text Position
+# Class Text Position
+CLASS_TXT_POS_X=WINDOW_WIDTH//2
+CLASS_TXT_POS_Y=35
 
-# Text Font
-TXT_COLOR=(20,20,20)
-TXT_FONT="Consolas"
-TXT_FONT_SIZE=15
-TXT_FONT_BOLD=False
-TXT_FONT_ITALIC=False
-
-# Text Color
-TXT_COLOR=()
+# Class Text Color & Font
+CLASS_TXT_COLOR=(255,192,203)
+CLASS_TXT_FONT="Consolas"
+CLASS_TXT_FONT_SIZE=20
+CLASS_TXT_FONT_BOLD=False
+CLASS_TXT_FONT_ITALIC=False
 
 # MTSD Dataset
 MTSD_CLASSES=401
@@ -74,12 +73,21 @@ IMAGE_POS_Y=250
 
 class Text:
     def __init__(self,
-                 x: int,
-                 y: int,
+                 txt_pos: Tuple[int, int],
+                 txt: str,
+                 txt_color: Tuple[int, int, int],
+                 font: str,
+                 font_size: int,
+                 bold: bool,
+                 italic: bool,
                  ) -> None:
-        self.x = x
-        self.y = y
+        self.txt_pos = txt_pos
+        self.font = pygame.font.SysFont(name=font, size=font_size, bold=bold, italic=italic)
+        self.txt_surf = self.font.render(txt, True, txt_color)
+        self.txt_rect = self.txt_surf.get_rect(center=(CLASS_TXT_POS_X, CLASS_TXT_POS_Y))
 
+    def txtshow(self, window):
+        window.blit(self.txt_surf, self.txt_rect)
 
 class Button:
     def __init__(self,
@@ -88,7 +96,7 @@ class Button:
                  width: float,
                  height: float,
                  flags: int,
-                 btn_txt : str,
+                 btn_txt: str,
                  btn_txt_color: Tuple[int, int, int],
                  font: str,
                  font_size: int,
@@ -97,9 +105,9 @@ class Button:
                  onclick_fn,
                  one_press: bool,
                  ) -> None:
-        self.btn_surface = pygame.Surface(size=(width, height), flags=flags)
+        self.btn_surf = pygame.Surface(size=(width, height), flags=flags)
         self.font = pygame.font.SysFont(name=font, size=font_size, bold=bold, italic=italic)
-        self.btn_txt = self.font.render(btn_txt, True, btn_txt_color)
+        self.txt_surf = self.font.render(btn_txt, True, btn_txt_color)
         self.btn_rect = pygame.Rect(x, y, width, height)
         self.onclick_fn = onclick_fn
         self.one_press = one_press
@@ -107,11 +115,11 @@ class Button:
 
     def process(self, window):
         mouse_pos = pygame.mouse.get_pos()
-        self.btn_surface.fill(color=BUTTON_COLOR)
+        self.btn_surf.fill(color=BUTTON_COLOR)
         if self.btn_rect.collidepoint(mouse_pos):
-            self.btn_surface.fill(color=BUTTON_COLOR_HOVER)
+            self.btn_surf.fill(color=BUTTON_COLOR_HOVER)
             if pygame.mouse.get_pressed(num_buttons=3)[0]:
-                self.btn_surface.fill(color=BUTTON_COLOR_PRESSED)
+                self.btn_surf.fill(color=BUTTON_COLOR_PRESSED)
                 if self.one_press:
                     self.onclick_fn()
                 elif not self.pressed:
@@ -119,9 +127,9 @@ class Button:
                     self.pressed = True
             else:
                 self.pressed = False
-        self.btn_surface.blit(self.btn_txt, [self.btn_rect.width/2 - self.btn_txt.get_rect().width/2,
-                                             self.btn_rect.height/2 - self.btn_txt.get_rect().height/2])
-        window.blit(self.btn_surface, self.btn_rect)
+        self.btn_surf.blit(self.txt_surf, [self.btn_rect.width/2 - self.txt_surf.get_rect().width/2,
+                                           self.btn_rect.height/2 - self.txt_surf.get_rect().height/2])
+        window.blit(self.btn_surf, self.btn_rect)
 
 class LabelTool:
     def __init__(self,
@@ -142,6 +150,10 @@ class LabelTool:
                              btn_txt="Prev", btn_txt_color=BTN_TXT_COLOR,
                              font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
                              onclick_fn=self.imshow_prev, one_press=False)
+        self.class_txt = Text(txt_pos=(CLASS_TXT_POS_X, CLASS_TXT_POS_Y),
+                              txt=CLASS_DIRS[INDEX], txt_color=CLASS_TXT_COLOR,
+                              font=CLASS_TXT_FONT, font_size=CLASS_TXT_FONT_SIZE,
+                              bold=CLASS_TXT_FONT_BOLD, italic=CLASS_TXT_FONT_ITALIC,)
         self.buttons = [button_next, button_prev]
         self.window.fill(color=BACKGROUND_COLOR)
         self.fps = fps
@@ -177,6 +189,7 @@ class LabelTool:
                 elif event.type == VIDEORESIZE:
                     self.window.fill(color=self.background_color)
                     pygame.display.flip()
+            self.class_txt.txtshow(window=self.window)
             for button in self.buttons:
                 button.process(window=self.window)
                 pygame.display.flip()
