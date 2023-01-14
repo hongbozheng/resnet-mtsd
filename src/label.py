@@ -2,7 +2,7 @@
 
 import os
 import sys
-from typing import Tuple, List
+from typing import Tuple
 import pygame
 from pygame.locals import *
 import random
