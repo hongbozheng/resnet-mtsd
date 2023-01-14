@@ -206,11 +206,12 @@ class LabelTool:
         self.window.fill(color=BACKGROUND_COLOR)
         pygame.display.flip()
 
-    def init_window(self):
+    def init_window(self) -> None:
         self.txt_class_index.txtshow(window=self.window)
         self.txt_class.txtshow(window=self.window)
         self.update_txt()
         self.imshow(rows=IMAGE_ROW, columns=IMAGE_COLUMN)
+        return
 
     def update_txt(self) -> None:
         self.window.fill(color=BACKGROUND_COLOR)
