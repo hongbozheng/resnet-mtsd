@@ -5,6 +5,7 @@ import sys
 from typing import Tuple, List
 import pygame
 from pygame.locals import *
+import random
 
 pygame.init()
 
@@ -27,7 +28,7 @@ FLAGS=RESIZABLE
 BACKGROUND_COLOR=(192,192,192)
 
 # Button (Next & Prev) Position
-BTN_NEXT_X=700
+BTN_NEXT_X=900
 BTN_NEXT_Y=700
 BTN_NEXT_WIDTH=50
 BTN_NEXT_HEIGHT=30
@@ -95,8 +96,9 @@ CLASS_INDEX=0
 # MTSD Dataset Image Position
 IMAGE_WIDTH=100
 IMAGE_HEIGHT=100
-IMAGE_POS_X=250
-IMAGE_POS_Y=250
+IMAGE_POS_X=35
+IMAGE_POS_Y=135
+IMAGE_GRANULARITY=30
 
 class Text:
     def __init__(self,
@@ -113,8 +115,9 @@ class Text:
         self.txt_pos = txt_pos
         self.txt_rect = self.txt_surf.get_rect(center=txt_pos)
 
-    def txtshow(self, window):
+    def txtshow(self, window) -> None:
         window.blit(self.txt_surf, self.txt_pos)
+        return
 
 class Button:
     def __init__(self,
@@ -140,7 +143,7 @@ class Button:
         self.one_press = one_press
         self.pressed = False
 
-    def process(self, window):
+    def process(self, window) -> None:
         mouse_pos = pygame.mouse.get_pos()
         self.btn_surf.fill(color=BUTTON_COLOR)
         if self.btn_rect.collidepoint(mouse_pos):
@@ -157,6 +160,7 @@ class Button:
         self.btn_surf.blit(self.txt_surf, [self.btn_rect.width/2 - self.txt_surf.get_rect().width/2,
                                            self.btn_rect.height/2 - self.txt_surf.get_rect().height/2])
         window.blit(self.btn_surf, self.btn_rect)
+        return
 
 class LabelTool:
     def __init__(self,
@@ -168,6 +172,7 @@ class LabelTool:
         self.size = size
         self.flags = flags
         self.background_color = background_color
+        pygame.display.set_caption("Label Tool")
         self.window = pygame.display.set_mode(size=self.size, flags=self.flags)
         button_next = Button(x=BTN_NEXT_X, y=BTN_NEXT_Y, width=BTN_NEXT_WIDTH, height=BTN_NEXT_HEIGHT, flags=0,
                              font=BTN_FONT, font_size=BTN_FONT_SIZE, bold=BTN_FONT_BOLD, italic=BTN_FONT_ITALIC,
@@ -199,7 +204,7 @@ class LabelTool:
         self.fps_clk = pygame.time.Clock()
         pygame.display.flip()
 
-    def update_txt(self):
+    def update_txt(self) -> None:
         self.window.fill(color=BACKGROUND_COLOR)
         self.txt_class_name = Text(font=TXT_CLASS_NAME_FONT, font_size=TXT_CLASS_NAME_FONT_SIZE,
                                    bold=TXT_CLASS_NAME_FONT_BOLD, italic=TXT_CLASS_NAME_FONT_ITALIC,
@@ -212,27 +217,40 @@ class LabelTool:
         self.txt_class_name.txtshow(window=self.window)
         self.txt_cls_idx.txtshow(window=self.window)
 
-    def imshow9x9(self) -> None:
+    def imshow3x3(self) -> None:
         class_dir = MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + CLASS_DIRS[CLASS_INDEX] + '/'
-        if len(class_dir) >= 9:
-            pass
-        image = pygame.image.load(class_dir + os.listdir(path=class_dir)[0])
-        image = pygame.transform.scale(surface=image, size=(IMAGE_WIDTH, IMAGE_HEIGHT))
-        self.window.blit(image, (IMAGE_POS_X, IMAGE_POS_Y))
+        image_keys = os.listdir(path=class_dir)
+        if len(image_keys) > 9:
+            indices = random.sample(population=range(0, len(image_keys)), k=9)
+        else:
+            indices = list(range(0, len(image_keys)))
+
+        images = []
+        for i in indices:
+            image = pygame.image.load(class_dir + image_keys[i])
+            image = pygame.transform.scale(surface=image, size=(IMAGE_WIDTH, IMAGE_HEIGHT))
+            images.append(image)
+
+        for i, image in enumerate(images):
+            self.window.blit(image, (IMAGE_POS_X+i%3*(IMAGE_WIDTH+IMAGE_GRANULARITY),
+                                     IMAGE_POS_Y+i//3*(IMAGE_HEIGHT+IMAGE_GRANULARITY)))
+        return
 
     def imshow_prev(self) -> None:
         global CLASS_INDEX
         if CLASS_INDEX > 0:
             CLASS_INDEX -= 1
-        self.update_txt()
-        self.imshow9x9()
+            self.update_txt()
+            self.imshow3x3()
+        return
 
     def imshow_next(self) -> None:
         global CLASS_INDEX
         if CLASS_INDEX < MTSD_CLASSES-1:
             CLASS_INDEX += 1
-        self.update_txt()
-        self.imshow9x9()
+            self.update_txt()
+            self.imshow3x3()
+        return
 
     def run(self) -> None:
         while True:
@@ -249,6 +267,7 @@ class LabelTool:
                 button.process(window=self.window)
                 pygame.display.flip()
             self.fps_clk.tick(self.fps)
+        return
 
 def main():
     label_tool = LabelTool(size=(WINDOW_WIDTH, WINDOW_HEIGHT), flags=FLAGS, background_color=BACKGROUND_COLOR, fps=FPS)
