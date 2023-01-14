@@ -19,12 +19,25 @@ else:
     BN_AXIS = 3
     INPUT_SHAPE = (BATCH_SIZE, INPUT_HEIGHT, INPUT_WIDTH, INPUT_CHANNELS)
 
-class ResNet(Layer):
-    def __init__(self, num_res_blocks: List[int], include_top: bool, pooling: str=None, num_classes: int=1000) -> None:
-        """
-        Instantiates the ResNet architecture.
+RESNET50_WEIGHTS_FILEPATH="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5"
+RESNET101_WEIGHTS_FILEPATH="../weights/resnet101_weights_tf_dim_ordering_tf_kernels_notop.h5"
 
-        :param num_res_blocks: List[int], # of residual blocks in each of the 4 layers in ResNet architecture.
+class ResNet(Layer):
+    def __init__(self,
+                 num_res_blocks: List[int],
+                 preact: bool,
+                 use_bias: bool,
+                 include_top: bool,
+                 pooling: str=None,
+                 num_classes: int=1000
+                 ) -> None:
+        """
+        Instantiates the ResNet Backbone.
+
+        :param num_res_blocks: List[int], # of residual blocks in each of the 4 layers in ResNet backbone.
+        :param preact: whether to use pre-activation or not (True for ResNetV2, False for ResNet and ResNeXt).
+        :param use_bias: whether to use biases for convolutional layers or not
+                         (True for ResNet and ResNetV2, False for ResNeXt).
         :param include_top: bool, whether to include the fully-connected layer at the top of the network.
         :param pooling: str, optional pooling mode for feature extraction.
                         when `include_top` is `False`.
@@ -44,16 +57,23 @@ class ResNet(Layer):
         """
         super(ResNet, self).__init__()
         self.num_res_blocks = num_res_blocks
+        self.preact = preact
+        self.use_bias = use_bias
         self.include_top = include_top
         self.pooling = pooling
 
         self.padding_3 = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_padding")
-        self.conv7x7 = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", name="conv1_conv")
+        self.conv7x7 = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", use_bias=use_bias,
+                                     name="conv1_conv")
+
         self.bn = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="conv1_bn")
         self.relu = layers.Activation("relu", name="conv1_relu")
 
         self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="conv2_padding")
         self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="conv2_maxpool")
+
+        self.bn_post = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="post_bn")
+        self.relu_post = layers.Activation("relu", name="post_relu")
 
         self.global_avgpool = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(),
                                                             name="global_avgpool")
@@ -143,10 +163,14 @@ class ResNet(Layer):
         """
         x = self.padding_3(inputs=inputs, training=training)
         x = self.conv7x7(inputs=x, training=training)
-        x = self.bn(inputs=x, training=training)
-        x = self.relu(inputs=x, training=training)
+
+        if not self.preact:
+            x = self.bn(inputs=x, training=training)
+            x = self.relu(inputs=x, training=training)
+
         x = self.padding(inputs=x, training=training)
         x = self.maxpool(inputs=x, training=training)
+
         x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[0], filters=64, strides=(1,1), use_bias=True,
                                 name="conv2")
         x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[1], filters=128, strides=(2,2), use_bias=True,
@@ -155,6 +179,10 @@ class ResNet(Layer):
                                 name="conv4")
         x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[3], filters=512, strides=(2,2), use_bias=True,
                                 name="conv5")
+
+        if self.preact:
+            x = self.bn_post(inputs=x, training=training)
+            x = self.relu_post(inputs=x, training=training)
 
         if self.include_top:
             x = self.global_avgpool(inputs=x, training=training)
@@ -221,19 +249,25 @@ class ResNet(Layer):
         return resnet
 
 def main():
-    '''ResNet-50 Backbone'''
-    resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, pooling="avg", num_classes=1000)
-    resnet50_backbone = resnet50.model(input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50 Backbone",
-                                       weights="imagenet")
+    """
+    Function to test ResNet, ResNetV2 Backbones
+    :return: None
+    """
 
-    '''tensorflow.keras.applications.resnet.ResNet50 Backbone'''
+    '''Test ResNet Backbone with ResNet-50'''
+    resnet50 = ResNet(num_res_blocks=[3,4,6,3], preact=False, use_bias=True, include_top=False, pooling="avg",
+                      num_classes=1000)
+    resnet50_backbone = resnet50.model(input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50 Backbone",
+                                       weights=RESNET50_WEIGHTS_FILEPATH)
+
+    '''tensorflow.keras.applications.resnet.ResNet Backbone'''
     resnet50_backbone_orig = ResNet50(include_top=False, weights="imagenet", input_tensor=None,
                                       input_shape=INPUT_SHAPE[1:], pooling="avg", classes=1000)
 
     print(resnet50_backbone.summary())
-    print("[INFO]: Total # of layers in ResNet-50 Backbone %d" % len(resnet50_backbone.layers))
+    print("[INFO]: Total # of layers in ResNet Backbone %d" % len(resnet50_backbone.layers))
 
-    img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
+    img_input = tf.random.normal(shape=INPUT_SHAPE, dtype=tf.dtypes.float32)
     tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50_backbone.call(inputs=img_input),
                                                            y=resnet50_backbone_orig.call(inputs=img_input)))
     return
