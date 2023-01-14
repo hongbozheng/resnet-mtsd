@@ -201,9 +201,9 @@ class LabelTool:
                                    bold=TXT_CLASS_NAME_FONT_BOLD, italic=TXT_CLASS_NAME_FONT_ITALIC,
                                    txt=CLASS_DIRS[CLASS_INDEX], txt_color=TXT_CLASS_NAME_COLOR,
                                    txt_pos=(TXT_CLASS_NAME_POS_X, TXT_CLASS_NAME_POS_Y))
-        self.window.fill(color=BACKGROUND_COLOR)
         self.fps = fps
         self.fps_clk = pygame.time.Clock()
+        self.window.fill(color=BACKGROUND_COLOR)
         pygame.display.flip()
 
     def init_window(self):
