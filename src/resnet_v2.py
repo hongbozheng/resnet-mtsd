@@ -58,26 +58,26 @@ class ResNetV2(Layer):
         self.include_top = include_top
         self.pooling = pooling
 
-        self.padding_3 = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")
+        self.padding_3 = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_padding")
         self.conv7x7 = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", use_bias=use_bias,
                                      name="conv1_conv")
 
-        self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")
-        self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")
+        self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="conv2_padding")
+        self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="conv2_maxpool")
 
         self.bn = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="post_bn")
         self.relu = layers.Activation("relu", name="post_relu")
 
         self.global_avgpool = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(),
-                                                            name="avg_pool")
-        self.global_maxpool = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")
+                                                            name="global_avgpool")
+        self.global_maxpool = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="global_maxpool")
 
         self.dense = layers.Dense(units=num_classes, activation="softmax", name="predictions")
 
     def _res_blk(self,
                  x: tf.float32,
                  filters: int,
-                 strides,
+                 strides: Union[int, Tuple[int,int]],
                  use_bias: bool=False,
                  conv_shortcut: bool=False,
                  name: str=None
@@ -99,25 +99,25 @@ class ResNetV2(Layer):
 
         if conv_shortcut:
             shortcut = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=strides, padding="VALID",
-                                     use_bias=use_bias, name=name + "_0_conv")(preact)
+                                     use_bias=use_bias, name=name + "_conv_sc")(preact)
         else:
             shortcut = (layers.MaxPooling2D(pool_size=(1,1), strides=strides)(x) if strides[0] > 1 else x)
 
         x = layers.Conv2D(filters=filters, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=False,
-                          name=name + "_1_conv")(preact)
-        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_1_bn")(x)
-        x = layers.Activation("relu", name=name + "_1_relu")(x)
+                          name=name + "_conv1")(preact)
+        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_bn1")(x)
+        x = layers.Activation("relu", name=name + "_relu1")(x)
 
-        x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name=name + "_2_pad")(x)
+        x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name=name + "_pad")(x)
         x = layers.Conv2D(filters=filters, kernel_size=(3,3), strides=strides, padding="VALID", use_bias=False,
-                          name=name + "_2_conv")(x)
-        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_2_bn")(x)
-        x = layers.Activation("relu", name=name + "_2_relu")(x)
+                          name=name + "_conv2")(x)
+        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_bn2")(x)
+        x = layers.Activation("relu", name=name + "_relu2")(x)
 
         x = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=use_bias,
-                          name=name + "_3_conv")(x)
+                          name=name + "_conv3")(x)
 
-        x = layers.Add(name=name + "_out")([shortcut, x])
+        x = layers.Add(name=name + "_add")([shortcut, x])
         return x
 
     def _res_blk_stack(self,
