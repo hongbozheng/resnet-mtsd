@@ -77,7 +77,7 @@ class ResNetV2(Layer):
     def _res_blk(self,
                  x: tf.float32,
                  filters: int,
-                 strides: Union[int, Tuple[int,int]],
+                 strides,
                  use_bias: bool=False,
                  conv_shortcut: bool=False,
                  name: str=None
@@ -101,18 +101,15 @@ class ResNetV2(Layer):
             shortcut = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=strides, padding="VALID",
                                      use_bias=use_bias, name=name + "_0_conv")(preact)
         else:
-            if strides[0] > 1:
-                shortcut = layers.MaxPooling2D(pool_size=(1,1), strides=strides)(x)
-            else:
-                shortcut = x
+            shortcut = (layers.MaxPooling2D(pool_size=(1,1), strides=strides)(x) if strides[0] > 1 else x)
 
-        x = layers.Conv2D(filters=filters, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=use_bias,
+        x = layers.Conv2D(filters=filters, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=False,
                           name=name + "_1_conv")(preact)
         x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_1_bn")(x)
         x = layers.Activation("relu", name=name + "_1_relu")(x)
 
         x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name=name + "_2_pad")(x)
-        x = layers.Conv2D(filters=filters, kernel_size=(3,3), strides=strides, padding="VALID", use_bias=use_bias,
+        x = layers.Conv2D(filters=filters, kernel_size=(3,3), strides=strides, padding="VALID", use_bias=False,
                           name=name + "_2_conv")(x)
         x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_2_bn")(x)
         x = layers.Activation("relu", name=name + "_2_relu")(x)
@@ -226,7 +223,7 @@ class ResNetV2(Layer):
                                                         data_format=backend.image_data_format(),
                                                         require_flatten=self.include_top, weights=None)
         if input_tensor is None:
-            img_input = layers.Input(shape=input_shape, name="img_input")
+            img_input = layers.Input(shape=input_shape, name="input_1")
         else:
             if not backend.is_keras_tensor(x=input_tensor):
                 img_input = layers.Input(tensor=input_tensor, shape=input_shape)
@@ -235,11 +232,11 @@ class ResNetV2(Layer):
 
         resnet = Model(inputs=img_input, outputs=self.call(inputs=img_input), name=name)
 
-        # if weights == "imagenet":
-        #     resnet.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
-        #                         by_name=False, skip_mismatch=False, options=None)
-        # elif weights is not None:
-        #     resnet.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
+        if weights == "imagenet":
+            resnet.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
+                                by_name=False, skip_mismatch=False, options=None)
+        elif weights is not None:
+            resnet.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
         return resnet
 
 def main():
@@ -262,11 +259,9 @@ def main():
     print(resnet50v2_backbone.summary())
     print("[INFO]: Total # of layers in ResNet Backbone %d" % len(resnet50v2_backbone.layers))
 
-    # print(resnet50v2_backbone_orig.summary())
-    # print("[INFO]: Total # of layers in ResNet Backbone %d" % len(resnet50v2_backbone_orig.layers))
-
-    # tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50v2_backbone.call(inputs=img_input),
-    #                                                        y=resnet50v2_backbone_orig.call(inputs=img_input)))
+    img_input = tf.random.normal(shape=INPUT_SHAPE, dtype=tf.dtypes.float32)
+    tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50v2_backbone.call(inputs=img_input),
+                                                           y=resnet50v2_backbone_orig.call(inputs=img_input)))
     return
 
 if __name__ == "__main__":
