@@ -73,32 +73,6 @@ class ResNet(Layer):
 
         self.dense = layers.Dense(units=num_classes, activation="softmax", name="predictions")
 
-    def _res_blk_stack(self,
-                       x: tf.float32,
-                       blocks: int,
-                       filters: int,
-                       strides: Union[int, Tuple[int,int]],
-                       use_bias: bool=False,
-                       name: str=None
-                       ) -> tf.float32:
-        """
-        create a residual block stack.
-
-        :param x: tf.float32, input tensor.
-        :param blocks: integer, blocks in the stacked residual blocks.
-        :param filters: integer, filters of the bottleneck layer in a block.
-        :param strides: integer or integer tuple, stride of the layer in the residual block.
-        :param use_bias: Boolean, whether the layer uses a bias vector.
-        :param name: string, stack label.
-        :return: tf.float32, output tensor for the stacked blocks.
-        """
-        x = self._res_blk(x=x, filters=filters, strides=strides, use_bias=use_bias, conv_shortcut=True,
-                          name=name + "_block1")
-        for i in range(2, blocks+1):
-            x = self._res_blk(x=x, filters=filters, strides=(1,1), use_bias=use_bias, conv_shortcut=False,
-                              name=name + "_block" + str(i))
-        return x
-
     def _res_blk(self,
                  x: tf.float32,
                  filters: int,
@@ -142,6 +116,32 @@ class ResNet(Layer):
 
         x = layers.Add(name=name + "_add")([shortcut, x])
         x = layers.Activation("relu", name=name + "_relu3")(x)
+        return x
+
+    def _res_blk_stack(self,
+                       x: tf.float32,
+                       blocks: int,
+                       filters: int,
+                       strides: Union[int, Tuple[int,int]],
+                       use_bias: bool=False,
+                       name: str=None
+                       ) -> tf.float32:
+        """
+        create a residual block stack.
+
+        :param x: tf.float32, input tensor.
+        :param blocks: integer, blocks in the stacked residual blocks.
+        :param filters: integer, filters of the bottleneck layer in a block.
+        :param strides: integer or integer tuple, stride of the layer in the residual block.
+        :param use_bias: Boolean, whether the layer uses a bias vector.
+        :param name: string, stack label.
+        :return: tf.float32, output tensor for the stacked blocks.
+        """
+        x = self._res_blk(x=x, filters=filters, strides=strides, use_bias=use_bias, conv_shortcut=True,
+                          name=name + "_block1")
+        for i in range(2, blocks+1):
+            x = self._res_blk(x=x, filters=filters, strides=(1,1), use_bias=use_bias, conv_shortcut=False,
+                              name=name + "_block" + str(i))
         return x
 
     def call(self, inputs, training: bool=False):
