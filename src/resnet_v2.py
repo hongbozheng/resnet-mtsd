@@ -58,21 +58,70 @@ class ResNetV2(Layer):
         self.include_top = include_top
         self.pooling = pooling
 
-        self.padding_3 = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_padding")
+        self.padding_3 = layers.ZeroPadding2D(padding=((3,3),(3,3)), name="conv1_pad")
         self.conv7x7 = layers.Conv2D(filters=64, kernel_size=(7,7), strides=(2,2), padding="VALID", use_bias=use_bias,
                                      name="conv1_conv")
 
-        self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="conv2_padding")
-        self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="conv2_maxpool")
+        self.padding = layers.ZeroPadding2D(padding=((1,1),(1,1)), name="pool1_pad")
+        self.maxpool = layers.MaxPooling2D(pool_size=(3,3), strides=(2,2), name="pool1_pool")
 
         self.bn = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name="post_bn")
         self.relu = layers.Activation("relu", name="post_relu")
 
         self.global_avgpool = layers.GlobalAveragePooling2D(data_format=backend.image_data_format(),
-                                                            name="global_avgpool")
-        self.global_maxpool = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="global_maxpool")
+                                                            name="avg_pool")
+        self.global_maxpool = layers.GlobalMaxPooling2D(data_format=backend.image_data_format(), name="max_pool")
 
         self.dense = layers.Dense(units=num_classes, activation="softmax", name="predictions")
+
+    def _res_blk(self,
+                 x: tf.float32,
+                 filters: int,
+                 strides: Union[int, Tuple[int,int]],
+                 use_bias: bool=False,
+                 conv_shortcut: bool=False,
+                 name: str=None
+                 ) -> tf.float32:
+        """
+        create a residual block.
+
+        :param x: tf.float32, input tensor.
+        :param filters: integer, filters of the bottleneck layer.
+        :param strides: integer or integer tuple, stride of the layer.
+        :param use_bias: Boolean, whether the layer uses a bias vector.
+        :param conv_shortcut: Boolean, use convolution shortcut if True
+                              otherwise identity shortcut.
+        :param name: string, block label.
+        :return: tf.float32, output tensor for the residual block.
+        """
+        preact = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_preact_bn")(x)
+        preact = layers.Activation("relu", name=name + "_preact_relu")(preact)
+
+        if conv_shortcut:
+            shortcut = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=strides, padding="VALID",
+                                     use_bias=use_bias, name=name + "_0_conv")(preact)
+        else:
+            if strides[0] > 1:
+                shortcut = layers.MaxPooling2D(pool_size=(1,1), strides=strides)(x)
+            else:
+                shortcut = x
+
+        x = layers.Conv2D(filters=filters, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=use_bias,
+                          name=name + "_1_conv")(preact)
+        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_1_bn")(x)
+        x = layers.Activation("relu", name=name + "_1_relu")(x)
+
+        x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name=name + "_2_pad")(x)
+        x = layers.Conv2D(filters=filters, kernel_size=(3,3), strides=strides, padding="VALID", use_bias=use_bias,
+                          name=name + "_2_conv")(x)
+        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_2_bn")(x)
+        x = layers.Activation("relu", name=name + "_2_relu")(x)
+
+        x = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=use_bias,
+                          name=name + "_3_conv")(x)
+
+        x = layers.Add(name=name + "_out")([shortcut, x])
+        return x
 
     def _res_blk_stack(self,
                        x: tf.float32,
@@ -98,56 +147,8 @@ class ResNetV2(Layer):
         for i in range(2, blocks):
             x = self._res_blk(x=x, filters=filters, strides=(1,1), use_bias=use_bias, conv_shortcut=False,
                               name=name + "_block" + str(i))
-        x = self._res_blk(x=x, filters=filters, strides=strides, name=name + "_block" + str(blocks))
-        return x
-
-    def _res_blk(self,
-                 x: tf.float32,
-                 filters: int,
-                 strides: Union[int, Tuple[int,int]],
-                 use_bias: bool=False,
-                 conv_shortcut: bool=True,
-                 name: str=None
-                 ) -> tf.float32:
-        """
-        create a residual block.
-
-        :param x: tf.float32, input tensor.
-        :param filters: integer, filters of the bottleneck layer.
-        :param strides: integer or integer tuple, stride of the layer.
-        :param use_bias: Boolean, whether the layer uses a bias vector.
-        :param conv_shortcut: Boolean, use convolution shortcut if True
-                              otherwise identity shortcut.
-        :param name: string, block label.
-        :return: tf.float32, output tensor for the residual block.
-        """
-        preact = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_preact_bn")(x)
-        preact = layers.Activation("relu", name=name + "_preact_relu")(preact)
-
-        if conv_shortcut:
-            shortcut = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=strides, padding="VALID",
-                                     use_bias=use_bias, name=name + "_conv_sc")(preact)
-        else:
-            if strides[0] > 1:
-                shortcut = layers.MaxPooling2D(pool_size=(1,1), strides=strides)(x)
-            else:
-                shortcut = x
-
-        x = layers.Conv2D(filters=filters, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=use_bias,
-                          name=name + "_conv1")(preact)
-        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_bn1")(x)
-        x = layers.Activation("relu", name=name + "_relu1")(x)
-
-        x = layers.ZeroPadding2D(padding=((1,1),(1,1)), name=name + "_pad")(x)
-        x = layers.Conv2D(filters=filters, kernel_size=(3,3), strides=strides, padding="VALID", use_bias=use_bias,
-                          name=name + "conv2")(x)
-        x = layers.BatchNormalization(axis=BN_AXIS, epsilon=1.001e-5, name=name + "_bn2")(x)
-        x = layers.Activation("relu", name=name + "_relu2")(x)
-
-        x = layers.Conv2D(filters=4*filters, kernel_size=(1,1), strides=(1,1), padding="VALID", use_bias=use_bias,
-                          name=name + "_conv3")(x)
-
-        x = layers.Add(name=name + "_add")([shortcut, x])
+        x = self._res_blk(x=x, filters=filters, strides=strides, use_bias=use_bias, conv_shortcut=False,
+                          name=name + "_block" + str(blocks))
         return x
 
     def call(self, inputs, training: bool=False):
@@ -164,14 +165,14 @@ class ResNetV2(Layer):
 
         x = self.padding(inputs=x, training=training)
         x = self.maxpool(inputs=x, training=training)
-        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[0], filters=64, strides=(1,1), use_bias=self.use_bias,
+        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[0], filters=64, strides=(2,2), use_bias=self.use_bias,
                                 name="conv2")
 
         x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[1], filters=128, strides=(2,2), use_bias=self.use_bias,
                                 name="conv3")
         x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[2], filters=256, strides=(2,2), use_bias=self.use_bias,
                                 name="conv4")
-        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[3], filters=512, strides=(2,2), use_bias=self.use_bias,
+        x = self._res_blk_stack(x=x, blocks=self.num_res_blocks[3], filters=512, strides=(1,1), use_bias=self.use_bias,
                                 name="conv5")
 
         x = self.bn(inputs=x, training=training)
@@ -251,7 +252,7 @@ def main():
     # ResNet Backbone (ResNetV2-50)
     resnet50v2 = ResNetV2(num_res_blocks=[3,4,6,3], use_bias=True, include_top=False, pooling="avg",
                           num_classes=1000)
-    resnet50v2_backbone = resnet50v2.model(input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50V2 Backbone",
+    resnet50v2_backbone = resnet50v2.model(input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50V2-Backbone",
                                            weights=RESNET50V2_WEIGHTS_NOTOP_FILEPATH)
 
     # tensorflow.keras.applications.resnet.ResNet Backbone (ResNetV2-50)
@@ -260,6 +261,9 @@ def main():
 
     print(resnet50v2_backbone.summary())
     print("[INFO]: Total # of layers in ResNet Backbone %d" % len(resnet50v2_backbone.layers))
+
+    # print(resnet50v2_backbone_orig.summary())
+    # print("[INFO]: Total # of layers in ResNet Backbone %d" % len(resnet50v2_backbone_orig.layers))
 
     # tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50v2_backbone.call(inputs=img_input),
     #                                                        y=resnet50v2_backbone_orig.call(inputs=img_input)))
