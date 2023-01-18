@@ -31,7 +31,7 @@ if backend.image_data_format() == "channels_first":
     INPUT_SHAPE = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 else:
     INPUT_SHAPE = (BATCH_SIZE, INPUT_HEIGHT, INPUT_WIDTH, INPUT_CHANNELS)
-EPOCHS=300
+EPOCHS=200
 
 def lr_schedule(epoch):
     """Learning Rate Schedule
@@ -43,13 +43,13 @@ def lr_schedule(epoch):
         lr (float32): learning rate
     """
     lr = 1e-3
-    if epoch > 250:
+    if epoch > 150:
         lr *= 0.5e-3
-    elif epoch > 200:
-        lr *= 1e-3
-    elif epoch > 150:
-        lr *= 1e-2
     elif epoch > 100:
+        lr *= 1e-3
+    elif epoch > 50:
+        lr *= 1e-2
+    elif epoch > 10:
         lr *= 1e-1
     print('[INFO]: Learning Rate: %f' % lr)
     return lr
@@ -131,15 +131,15 @@ def main():
 
         loss_fn = losses.SparseCategoricalCrossentropy(from_logits=False)
 
-        resnet152 = ResNet(num_res_blocks=[3,4,23,3], use_bias=True, include_top=False, pooling="avg",
+        resnet152 = ResNet(num_res_blocks=[3,8,36,3], use_bias=True, include_top=False, pooling="avg",
                                num_classes=1000)
         resnet152_backbone = resnet152.model(input_shape=INPUT_SHAPE[1:], input_tensor=None,
-                                             name="ResNet-101V2-Backbone",
-                                             weights="../weights/resnet101_weights_tf_dim_ordering_tf_kernels_notop.h5")
+                                             name="ResNet152-Backbone",
+                                             weights="../weights/resnet152_weights_tf_dim_ordering_tf_kernels_notop.h5")
         resnet152_backbone.trainable = False
 
         classifier = Classifier(resnet_backbone=resnet152_backbone, num_classes=MTSD_CLASSES).model(
-            input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNetV2-101-Classifier")
+            input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet152-Classifier")
         print(classifier.summary())
         classifier.compile(optimizer=SGD, loss=loss_fn, metrics=["accuracy"], loss_weights=None, weighted_metrics=None,
                            run_eagerly=None, steps_per_execution=None, jit_compile=None)
@@ -150,7 +150,7 @@ def main():
             os.makedirs(save_dir)
         filepath = os.path.join(save_dir, model_name)
         checkpoint = ModelCheckpoint(filepath=filepath,
-                                     monitor='val_acc',
+                                     monitor='val_accuracy',
                                      verbose=1,
                                      save_best_only=True)
         lr_scheduler = LearningRateScheduler(lr_schedule)
