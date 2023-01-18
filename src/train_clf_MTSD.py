@@ -1,5 +1,7 @@
 import config
+import os
 from resnet import ResNet
+from resnet_v2 import ResNetV2
 from resnet_clf import Classifier
 from MTSD_loader import MTSDLoader
 import tensorflow as tf
@@ -7,6 +9,9 @@ from tensorflow.keras import backend
 from tensorflow.keras import layers
 from tensorflow.keras import optimizers
 from tensorflow.keras import losses
+from tensorflow.keras.callbacks import LearningRateScheduler
+from tensorflow.keras.callbacks import ReduceLROnPlateau
+from tensorflow.keras.callbacks import ModelCheckpoint
 import numpy as np
 
 MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_images_train/"
@@ -26,7 +31,29 @@ if backend.image_data_format() == "channels_first":
     INPUT_SHAPE = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 else:
     INPUT_SHAPE = (BATCH_SIZE, INPUT_HEIGHT, INPUT_WIDTH, INPUT_CHANNELS)
-EPOCHS=30
+EPOCHS=300
+
+def lr_schedule(epoch):
+    """Learning Rate Schedule
+    Learning rate is scheduled to be reduced after 80, 120, 160, 180 epochs.
+    Called automatically every epoch as part of callbacks during training.
+    # Arguments
+        epoch (int): The number of epochs
+    # Returns
+        lr (float32): learning rate
+    """
+    lr = 1e-3
+    if epoch > 250:
+        lr *= 0.5e-3
+    elif epoch > 200:
+        lr *= 1e-3
+    elif epoch > 150:
+        lr *= 1e-2
+    elif epoch > 100:
+        lr *= 1e-1
+    print('[INFO]: Learning Rate: %f' % lr)
+    return lr
+
 
 def main():
     strategy = tf.distribute.MirroredStrategy(devices=config.GPUs, cross_device_ops=None)
@@ -60,11 +87,11 @@ def main():
         train_ds = mtsd_train_loader.dataset
         val_ds = mtsd_val_loader.dataset
         class_names = train_ds.class_names
-        print(class_names)
-        for image_batch, label_batch in train_ds:
-            print(image_batch.shape)
-            print(label_batch.shape)
-            break
+        # print(class_names)
+        # for image_batch, label_batch in train_ds:
+        #     print(image_batch.shape)
+        #     print(label_batch.shape)
+        #     break
 
         # import matplotlib.pyplot as plt
         #
@@ -82,15 +109,15 @@ def main():
         norm_val_ds = val_ds.map(lambda x, y: (norm_layer(x), y))
         image_batch, label_batch = next(iter(norm_train_ds))
         first_image = image_batch[0]
-        print(np.min(first_image), np.max(first_image))
+        # print(np.min(first_image), np.max(first_image))
 
         # AUTOTUNE = tf.data.AUTOTUNE
         # train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
         # val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
-        SGD = optimizers.SGD(learning_rate=0.01,
+        SGD = optimizers.SGD(learning_rate=1e-3,
                              momentum=0.9,
-                             nesterov=True,
+                             nesterov=False,
                              amsgrad=False,
                              weight_decay=1e-6,
                              clipnorm=None,
@@ -104,18 +131,36 @@ def main():
 
         loss_fn = losses.SparseCategoricalCrossentropy(from_logits=False)
 
-        # creates ResNet-50 Backbone
-        resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, pooling="avg", num_classes=1000)
-        resnet50_backbone = resnet50.model(input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50-Backbone",
-                                           weights="imagenet")
-        resnet50_backbone.trainable = False
-        # creates ResNet-50 + Classifier Model
-        classifier = Classifier(resnet_backbone=resnet50_backbone, num_classes=MTSD_CLASSES).model(
-            input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50-Classifier")
+        resnet152 = ResNet(num_res_blocks=[3,4,23,3], use_bias=True, include_top=False, pooling="avg",
+                               num_classes=1000)
+        resnet152_backbone = resnet152.model(input_shape=INPUT_SHAPE[1:], input_tensor=None,
+                                             name="ResNet-101V2-Backbone",
+                                             weights="../weights/resnet101_weights_tf_dim_ordering_tf_kernels_notop.h5")
+        resnet152_backbone.trainable = False
+
+        classifier = Classifier(resnet_backbone=resnet152_backbone, num_classes=MTSD_CLASSES).model(
+            input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNetV2-101-Classifier")
         print(classifier.summary())
         classifier.compile(optimizer=SGD, loss=loss_fn, metrics=["accuracy"], loss_weights=None, weighted_metrics=None,
                            run_eagerly=None, steps_per_execution=None, jit_compile=None)
-        classifier.fit(train_ds, epochs=EPOCHS, verbose=1, validation_data=val_ds)
+
+        save_dir = os.path.join(os.getcwd(), 'saved_models')
+        model_name = 'resnet152_model.{epoch:02d}.h5'
+        if not os.path.isdir(save_dir):
+            os.makedirs(save_dir)
+        filepath = os.path.join(save_dir, model_name)
+        checkpoint = ModelCheckpoint(filepath=filepath,
+                                     monitor='val_acc',
+                                     verbose=1,
+                                     save_best_only=True)
+        lr_scheduler = LearningRateScheduler(lr_schedule)
+        lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
+                                       cooldown=0,
+                                       patience=5,
+                                       min_lr=0.5e-6)
+        callbacks = [checkpoint, lr_reducer, lr_scheduler]
+
+        classifier.fit(train_ds, epochs=EPOCHS, verbose=1, validation_data=val_ds, callbacks=callbacks)
 
     # img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
     # print(img_input)
