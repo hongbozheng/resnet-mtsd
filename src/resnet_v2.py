@@ -247,8 +247,7 @@ def main():
 
     '''Test ResNetV2 Backbone with ResNetV2-50'''
     # ResNet Backbone (ResNetV2-50)
-    resnet50v2 = ResNetV2(num_res_blocks=[3,4,6,3], use_bias=True, include_top=False, pooling="avg",
-                          num_classes=1000)
+    resnet50v2 = ResNetV2(num_res_blocks=[3,4,6,3], use_bias=True, include_top=False, pooling="avg", num_classes=1000)
     resnet50v2_backbone = resnet50v2.model(input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet-50V2-Backbone",
                                            weights=RESNET50V2_WEIGHTS_NOTOP_FILEPATH)
 
