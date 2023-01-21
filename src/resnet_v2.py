@@ -233,7 +233,7 @@ class ResNetV2(Layer):
         resnet = Model(inputs=img_input, outputs=self.call(inputs=img_input), name=name)
 
         if weights == "imagenet":
-            resnet.load_weights(filepath="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5",
+            resnet.load_weights(filepath="../weights/resnet50v2_weights_tf_dim_ordering_tf_kernels_notop.h5",
                                 by_name=False, skip_mismatch=False, options=None)
         elif weights is not None:
             resnet.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
