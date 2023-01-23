@@ -4,3 +4,4 @@ pillow==9.4.0
 tqdm==4.64.1
 matplotlib==3.6.3
 pygame==2.1.2
+PyQt5==5.15.7
