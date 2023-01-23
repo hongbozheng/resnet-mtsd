@@ -31,7 +31,7 @@ if backend.image_data_format() == "channels_first":
     INPUT_SHAPE = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 else:
     INPUT_SHAPE = (BATCH_SIZE, INPUT_HEIGHT, INPUT_WIDTH, INPUT_CHANNELS)
-EPOCHS=200
+EPOCHS=300
 
 def lr_schedule(epoch):
     """Learning Rate Schedule
@@ -131,8 +131,7 @@ def main():
 
         loss_fn = losses.SparseCategoricalCrossentropy(from_logits=False)
 
-        resnet152 = ResNet(num_res_blocks=[3,8,36,3], use_bias=True, include_top=False, pooling="avg",
-                               num_classes=1000)
+        resnet152 = ResNet(num_res_blocks=[3,8,36,3], use_bias=True, include_top=False, pooling="avg", num_classes=1000)
         resnet152_backbone = resnet152.model(input_shape=INPUT_SHAPE[1:], input_tensor=None,
                                              name="ResNet152-Backbone",
                                              weights="../weights/resnet152_weights_tf_dim_ordering_tf_kernels_notop.h5")
@@ -154,10 +153,7 @@ def main():
                                      verbose=1,
                                      save_best_only=True)
         lr_scheduler = LearningRateScheduler(lr_schedule)
-        lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
-                                       cooldown=0,
-                                       patience=5,
-                                       min_lr=0.5e-6)
+        lr_reducer = ReduceLROnPlateau(factor=0.1, cooldown=0, patience=5, min_lr=1e-5)
         callbacks = [checkpoint, lr_reducer, lr_scheduler]
 
         classifier.fit(train_ds, epochs=EPOCHS, verbose=1, validation_data=val_ds, callbacks=callbacks)
