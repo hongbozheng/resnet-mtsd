@@ -66,12 +66,27 @@ def main():
                                        batch_size=BATCH_SIZE,
                                        image_size=(INPUT_WIDTH, INPUT_HEIGHT),
                                        shuffle=True,
-                                       seed=10,
-                                       validation_split=None,
+                                       seed=123,
+                                       validation_split=0.2,
+                                       subset="training",
                                        interpolation="bilinear",
                                        crop_to_aspect_ratio=False)
 
-        mtsd_val_loader = MTSDLoader(directory=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_VAL_DIR,
+        mtsd_val_loader = MTSDLoader(directory=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR,
+                                     labels="inferred",
+                                     label_mode="int",
+                                     class_names=False,
+                                     color_mode="rgb",
+                                     batch_size=BATCH_SIZE,
+                                     image_size=(INPUT_WIDTH, INPUT_HEIGHT),
+                                     shuffle=True,
+                                     seed=123,
+                                     validation_split=0.2,
+                                     subset="validation",
+                                     interpolation="bilinear",
+                                     crop_to_aspect_ratio=False)
+
+        mtsd_test_loader = MTSDLoader(directory=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_VAL_DIR,
                                      labels="inferred",
                                      label_mode="int",
                                      class_names=False,
@@ -86,6 +101,7 @@ def main():
 
         train_ds = mtsd_train_loader.dataset
         val_ds = mtsd_val_loader.dataset
+        test_ds = mtsd_test_loader.dataset
         class_names = train_ds.class_names
         # print(class_names)
         # for image_batch, label_batch in train_ds:
@@ -160,16 +176,12 @@ def main():
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
         filepath = os.path.join(save_dir, model_name)
-        checkpoint = ModelCheckpoint(filepath=filepath,
-                                     monitor='val_accuracy',
-                                     verbose=1,
-                                     save_best_only=True)
-        lr_scheduler = LearningRateScheduler(lr_schedule)
 
+        checkpoint = ModelCheckpoint(filepath=filepath, monitor='val_accuracy', verbose=1, save_best_only=True)
+        lr_scheduler = LearningRateScheduler(lr_schedule)
         lr_reducer = ReduceLROnPlateau(factor=0.1, cooldown=0, patience=5, min_lr=1e-5)
 
-        callbacks = [checkpoint, lr_reducer, lr_scheduler]
-
+        callbacks = [checkpoint, lr_scheduler, lr_reducer]
         classifier.fit(train_ds, epochs=EPOCHS, verbose=1, validation_data=val_ds, callbacks=callbacks)
 
     # img_input = tf.random.normal(shape=input_shape, dtype=tf.dtypes.float32)
