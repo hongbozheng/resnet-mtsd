@@ -135,11 +135,23 @@ def main():
         resnet152_backbone = resnet152.model(input_shape=INPUT_SHAPE[1:], input_tensor=None,
                                              name="ResNet152-Backbone",
                                              weights="../weights/resnet152_weights_tf_dim_ordering_tf_kernels_notop.h5")
-        resnet152_backbone.trainable = False
+        resnet152_backbone.trainable = True
 
         classifier = Classifier(resnet_backbone=resnet152_backbone, num_classes=MTSD_CLASSES).model(
             input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet152-Classifier")
         print(classifier.summary())
+
+        # resnet152_v2 = ResNetV2(num_res_blocks=[3,8,36,3], use_bias=True, include_top=False, pooling="avg",
+        #                        num_classes=1000)
+        # resnet152_v2_backbone = resnet152_v2.model(input_shape=INPUT_SHAPE[1:], input_tensor=None,
+        #                                      name="ResNet152-V2-Backbone",
+        #                                      weights="../weights/resnet152v2_weights_tf_dim_ordering_tf_kernels_notop.h5")
+        # resnet152_v2_backbone.trainable = False
+        #
+        # classifier = Classifier(resnet_backbone=resnet152_v2_backbone, num_classes=MTSD_CLASSES).model(
+        #     input_shape=INPUT_SHAPE[1:], input_tensor=None, name="ResNet152-Classifier")
+        # print(classifier.summary())
+
         classifier.compile(optimizer=SGD, loss=loss_fn, metrics=["accuracy"], loss_weights=None, weighted_metrics=None,
                            run_eagerly=None, steps_per_execution=None, jit_compile=None)
 
@@ -153,7 +165,9 @@ def main():
                                      verbose=1,
                                      save_best_only=True)
         lr_scheduler = LearningRateScheduler(lr_schedule)
+
         lr_reducer = ReduceLROnPlateau(factor=0.1, cooldown=0, patience=5, min_lr=1e-5)
+
         callbacks = [checkpoint, lr_reducer, lr_scheduler]
 
         classifier.fit(train_ds, epochs=EPOCHS, verbose=1, validation_data=val_ds, callbacks=callbacks)
