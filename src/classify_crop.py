@@ -38,6 +38,7 @@ INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM=0
 INVALID_MTSD_FULLY_ANNOTATED_SIGNS_VAL_NUM=0
 INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM=0
 
+
 def check_dirs() -> None:
     for cls in MTSD_classes:
         if os.path.exists(path=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + cls):
@@ -53,6 +54,7 @@ def check_dirs() -> None:
         else:
             os.makedirs(name=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TEST_DIR + cls)
     return
+
 
 def update_num_signs(valid: bool, type: str) -> None:
     global VALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM, INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM,\
@@ -76,6 +78,7 @@ def update_num_signs(valid: bool, type: str) -> None:
             INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM += 1
     return
 
+
 def panorama(image: Image, object: Dict) -> Image:
     coord1 = object["bbox"]["cross_boundary"]["left"]
     coord2 = object["bbox"]["cross_boundary"]["right"]
@@ -90,6 +93,7 @@ def panorama(image: Image, object: Dict) -> Image:
     image_merged.paste(im=image_cropped_2, box=(int(box1[2] - box1[0]), 0))
     return image_merged
 
+
 def save_cropped_image(image_cropped: Image, image_name: str, type: str) -> None:
     if type == "train":
         image_cropped.save(fp=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TRAIN_DIR + image_name + ".jpeg", format="jpeg")
@@ -98,6 +102,7 @@ def save_cropped_image(image_cropped: Image, image_name: str, type: str) -> None
     elif type == "test":
         image_cropped.save(fp=MTSD_FULLY_ANNOTATED_CLASSIFIED_CROPPED_IMAGES_TEST_DIR + image_name + ".jpeg", format="jpeg")
     return
+
 
 def filter_clf_crop_save(file_label: str, annot_json_file: str, type: str) -> None:
     if type not in {"train", "val", "test"}:
@@ -126,6 +131,7 @@ def filter_clf_crop_save(file_label: str, annot_json_file: str, type: str) -> No
         else:
             update_num_signs(valid=False, type=type)
     return
+
 
 def main():
     # check if all necessary directories existed
@@ -161,7 +167,9 @@ def main():
     print("[INFO]: Filtered out Training Dataset   # %d" % INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TRAIN_NUM)
     print("[INFO]: Filtered out Validation Dataset # %d" % INVALID_MTSD_FULLY_ANNOTATED_SIGNS_VAL_NUM)
     print("[INFO]: Filtered out Test Dataset       # %d" % INVALID_MTSD_FULLY_ANNOTATED_SIGNS_TEST_NUM)
+
     return
+
 
 if __name__ == "__main__":
     main()

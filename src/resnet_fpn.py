@@ -8,11 +8,13 @@ from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.resnet import ResNet50, ResNet101
 
+
 BN_AXIS=3 if backend.image_data_format()=="channels_last" else 1
 BATCH_SIZE=1
 INPUT_CHANNELS=3
 INPUT_HEIGHT=224
 INPUT_WIDTH=224
+
 
 class ResNetFPN():
     """Instantiates the ResNet_FPN architecture.
@@ -238,6 +240,7 @@ class ResNetFPN():
     def get_model(self) -> Model:
         return self.model
 
+
 def main():
     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 
@@ -257,6 +260,7 @@ def main():
     # tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50.call(inputs=img_input),
     #                                                        y=resnet50_orig.call(inputs=img_input)))
     return
+
 
 if __name__ == '__main__':
     main()

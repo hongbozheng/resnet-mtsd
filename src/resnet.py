@@ -8,6 +8,7 @@ from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.resnet import ResNet50
 
+
 BATCH_SIZE=1
 INPUT_CHANNELS=3
 INPUT_HEIGHT=224
@@ -20,6 +21,7 @@ else:
     INPUT_SHAPE = (BATCH_SIZE, INPUT_HEIGHT, INPUT_WIDTH, INPUT_CHANNELS)
 
 RESNET50_WEIGHTS_NOTOP_FILEPATH="../weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5"
+
 
 class ResNet(Layer):
     def __init__(self,
@@ -234,6 +236,7 @@ class ResNet(Layer):
             resnet.load_weights(filepath=weights, by_name=False, skip_mismatch=False, options=None)
         return resnet
 
+
 def main():
     """
     Function to test ResNet Backbones
@@ -259,6 +262,7 @@ def main():
     tf.control_dependencies(control_inputs=tf.assert_equal(x=resnet50_backbone.call(inputs=img_input),
                                                            y=resnet50_backbone_orig.call(inputs=img_input)))
     return
+
 
 if __name__ == "__main__":
     main()

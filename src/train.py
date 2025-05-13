@@ -9,6 +9,7 @@ from tensorflow.keras.losses import SparseCategoricalCrossentropy
 from tensorflow.keras.datasets import mnist, cifar10
 from tensorflow.keras.applications.resnet import preprocess_input
 
+
 MNIST_CLASSES,CIFAR10_CLASSES=10,10
 CIFAR10_TRAIN_BATCH_SIZE=50000
 CIFAR10_TEST_BATCH_SIZE=10000
@@ -19,11 +20,13 @@ CIFAR10_INPUT_WIDTH=32
 BATCH_SIZE=32
 EPOCHS=20
 
+
 def classifier(x):
     x = layers.Flatten()(x)
     x = layers.Dense(units=1024, activation="relu", use_bias=True)(x)
     x = layers.Dense(units=512, activation="relu", use_bias=True)(x)
     return layers.Dense(units=CIFAR10_CLASSES, activation="softmax", use_bias=True, name="predictions")(x)
+
 
 def preprocess_cifar10():
     # load CIFAR-10 dataset (B, C, H, W)
@@ -38,6 +41,7 @@ def preprocess_cifar10():
     assert y_test.shape == (CIFAR10_TEST_BATCH_SIZE, 1)
     return x_train, y_train, x_test, y_test
 
+
 def create_resnet50_cifar10():
     input_shape = (CIFAR10_INPUT_CHANNELS, CIFAR10_INPUT_HEIGHT, CIFAR10_INPUT_WIDTH)
     resnet50 = ResNetFPN(num_res_blocks=[3,4,6,3], model_name="ResNet-50", include_top=False, weights="imagenet",
@@ -51,8 +55,10 @@ def create_resnet50_cifar10():
     resnet50_cifar10 = Model(inputs=img_input, outputs=pred, name="ResNet-50-CIFAR-10")
     return resnet50_cifar10
 
+
 def train_mnist():
     return
+
 
 def train_resnet50_cifar10():
     strategy = tf.distribute.MirroredStrategy(devices=config.GPUs, cross_device_ops=None)
@@ -65,9 +71,11 @@ def train_resnet50_cifar10():
         resnet50_cifar10.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=EPOCHS, validation_data=(x_test, y_test), verbose=1)
     return
 
+
 def main():
     train_resnet50_cifar10()
     return
+
 
 if __name__ == '__main__':
     main()

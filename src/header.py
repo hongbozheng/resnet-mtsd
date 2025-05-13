@@ -428,20 +428,24 @@ generate_dataset_color = {
     "warning--wombat-crossing--g1": "color--yellow",
     "warning--y-roads--g1": "color--yellow",
 }
+
 generate_dataset_shape = {
     "name": "shape",
     "regulatory--one-way-left--g1": "shape--rectangle--wide",
     "regulatory--one-way-right--g1": "shape--rectangle--wide"
 }
+
 generate_dataset_symbol = {
     "name": "symbol",
     "regulatory--one-way-left--g1": "symbol--arrow--left",
     "regulatory--one-way-right--g1": "symbol--arrow--right"
 }
+
 generate_dataset_text = {
     "name": "text",
     "regulatory--stop--g1": "text--stop"
 }
+
 generate_datasets = [
     generate_dataset_color,
     generate_dataset_shape,

@@ -6,6 +6,7 @@ from tensorflow.keras import backend
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
 
+
 MTSD_CLASSES=401
 BATCH_SIZE=1
 INPUT_CHANNELS=3
@@ -15,6 +16,7 @@ if backend.image_data_format() == "channels_first":
     INPUT_SHAPE = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
 else:
     INPUT_SHAPE = (BATCH_SIZE, INPUT_HEIGHT, INPUT_WIDTH, INPUT_CHANNELS)
+
 
 class Classifier(keras.Model):
     def __init__(self, resnet_backbone: keras.Model, num_classes: int):
@@ -74,6 +76,7 @@ class Classifier(keras.Model):
         classifier = Model(inputs=img_input, outputs=self.call(inputs=img_input, training=False, mask=None), name=name)
         return classifier
 
+
 def main():
     '''ResNet-50 Backbone'''
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], include_top=False, pooling="avg", num_classes=1000)
@@ -85,6 +88,7 @@ def main():
 
     print(classifier.summary())
     print("[INFO]: Total # of layers in ResNet-50 Classifier %d" % len(classifier.layers))
+
 
 if __name__ == "__main__":
     main()

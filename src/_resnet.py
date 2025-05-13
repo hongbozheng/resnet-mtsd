@@ -9,11 +9,13 @@ import h5py
 from keras.applications import imagenet_utils
 from tensorflow.keras.models import Model
 
+
 BN_AXIS=3 if backend.image_data_format()=="channels_last" else 1
 BATCH_SIZE=1
 INPUT_CHANNELS=3
 INPUT_HEIGHT=224
 INPUT_WIDTH=224
+
 
 class ResBlk(Layer):
     def __init__(self,
@@ -57,6 +59,7 @@ class ResBlk(Layer):
         x = self.relu3(x)
         return x
 
+
 class ResBlkStack(Layer):
     def __init__(self,
                  blocks: int,
@@ -84,6 +87,7 @@ class ResBlkStack(Layer):
     def call(self, x: tf.float32, training: bool=False) -> tf.float32:
         x = self.res_blk_stack.call(inputs=x, training=training)
         return x
+
 
 class ResNet(Layer):
     def __init__(self,
@@ -201,6 +205,7 @@ class ResNet(Layer):
             )
         return resnet
 
+
 def main():
     input_shape = (BATCH_SIZE, INPUT_CHANNELS, INPUT_HEIGHT, INPUT_WIDTH)
     resnet50 = ResNet(num_res_blocks=[3,4,6,3], pooling="avg", classes=1000, classifier_activation="softmax")
@@ -208,6 +213,7 @@ def main():
     print(resnet50_backbone.summary())
     print("[INFO]: Total # of layers in ResNet-50 backbone %d" % len(resnet50_backbone.layers))
     return
+
 
 if __name__ == "__main__":
     main()

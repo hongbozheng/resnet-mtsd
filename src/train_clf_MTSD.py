@@ -14,6 +14,7 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau
 from tensorflow.keras.callbacks import ModelCheckpoint
 import numpy as np
 
+
 MTSD_FULLY_ANNOTATED_IMAGES_TRAIN_DIR="../MTSD/mtsd_fully_annotated_images_train/"
 MTSD_FULLY_ANNOTATED_IMAGES_VAL_DIR="../MTSD/mtsd_fully_annotated_images_val/"
 MTSD_FULLY_ANNOTATED_IMAGES_TEST_DIR="../MTSD/mtsd_fully_annotated_images_test/"
@@ -32,6 +33,7 @@ if backend.image_data_format() == "channels_first":
 else:
     INPUT_SHAPE = (BATCH_SIZE, INPUT_HEIGHT, INPUT_WIDTH, INPUT_CHANNELS)
 EPOCHS=300
+
 
 def lr_schedule(epoch):
     """Learning Rate Schedule
@@ -189,6 +191,7 @@ def main():
     # pred = classifier.call(inputs=img_input)
     # print(pred)
     # print(tf.cast(x=tf.reshape(tensor=pred, shape=(-1,1)), dtype=tf.float32))
+
 
 if __name__ == "__main__":
     main()

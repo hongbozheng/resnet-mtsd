@@ -1,6 +1,7 @@
 import config
 from tensorflow.keras.utils import image_dataset_from_directory
 
+
 class MTSDLoader():
     def __init__(self,
                  directory: str,
@@ -136,9 +137,3 @@ class MTSDLoader():
                                                     interpolation=interpolation,
                                                     follow_links=follow_links,
                                                     crop_to_aspect_ratio=crop_to_aspect_ratio)
-
-def main():
-    return
-
-if __name__ == "__main__":
-    main()

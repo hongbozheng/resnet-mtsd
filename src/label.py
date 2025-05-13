@@ -112,6 +112,7 @@ IMAGE_ROW=3
 IMAGE_COLUMN=3
 IMAGE_GRANULARITY=30
 
+
 class Text:
     def __init__(self,
                  font: str,
@@ -130,6 +131,7 @@ class Text:
     def txtshow(self, window) -> None:
         window.blit(self.txt_surf, self.txt_pos)
         return
+
 
 class Button:
     def __init__(self,
@@ -173,6 +175,7 @@ class Button:
                                            self.btn_rect.height/2 - self.txt_surf.get_rect().height/2])
         window.blit(self.btn_surf, self.btn_rect)
         return
+
 
 class LabelTool:
     def __init__(self,
@@ -289,10 +292,12 @@ class LabelTool:
             self.fps_clk.tick(self.fps)
         return
 
+
 def main():
     label_tool = LabelTool(size=(WINDOW_WIDTH, WINDOW_HEIGHT), flags=FLAGS, background_color=BACKGROUND_COLOR, fps=FPS)
     label_tool.run()
     return
+
 
 if __name__ == "__main__":
     main()
